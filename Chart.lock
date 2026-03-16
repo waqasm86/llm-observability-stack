@@ -1,0 +1,9 @@
+dependencies:
+- name: ollama
+  repository: file://charts/ollama
+  version: 1.50.0
+- name: open-webui
+  repository: file://charts/open-webui
+  version: 12.10.0
+digest: sha256:a6789adfc8067719e12420270f46739b724b53f19ca76764edd07bcc22c24e97
+generated: "2026-03-16T20:06:40.929213592+05:00"

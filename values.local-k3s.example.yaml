@@ -4,7 +4,9 @@ namespace:
 
 nvidia:
   runtimeClassName: nvidia
-  gpuResourceName: nvidia.com/gpu
+  # This host uses NVIDIA MPS sharing. Keep per-pod GPU request at 1.
+  # Runtime logs currently show failRequestsGreaterThanOne=true for the plugin.
+  gpuResourceName: nvidia.com/gpu.shared
   gpuCount: 1
 
 langsmith:
@@ -52,14 +54,14 @@ ollama:
   runtimeClassName: nvidia
   image:
     repository: ollama/ollama
-    tag: latest
+    tag: 0.17.7
     pullPolicy: IfNotPresent
   ollama:
     gpu:
       enabled: true
       type: nvidia
       number: 1
-      nvidiaResource: nvidia.com/gpu
+      nvidiaResource: nvidia.com/gpu.shared
     models:
       create:
         - name: gemma3-1b-it-gguf-local
@@ -81,6 +83,15 @@ ollama:
       hostPath:
         path: /media/waqasm86/External1/Project-Nvidia-Office/models
         type: Directory
+
+langchainDemo:
+  image:
+    repository: langchain-demo
+    tag: 0.1.0
+    pullPolicy: IfNotPresent
+
+etcd:
+  enabled: false
 
 openWebUI:
   webuiSecretKey: "replace-with-a-32-plus-char-secret"
@@ -107,3 +118,13 @@ open-webui:
         secretKeyRef:
           name: open-webui-secrets
           key: WEBUI_SECRET_KEY
+
+pythonToolbox:
+  enabled: true
+  image:
+    repository: python-toolbox
+    tag: 0.2.0
+    pullPolicy: IfNotPresent
+  command:
+    - sleep
+    - infinity

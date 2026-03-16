@@ -21,14 +21,17 @@ spec:
           image: {{ .Values.langchainDemo.image.repository }}:{{ .Values.langchainDemo.image.tag }}
           imagePullPolicy: {{ .Values.langchainDemo.image.pullPolicy }}
           workingDir: /app
-          command: ["/bin/sh", "-lc"]
-          args:
-            - |
-              set -eu
-              if [ "{{ ternary "true" "false" .Values.langchainDemo.installPackagesOnStartup }}" = "true" ]; then
-                python -m pip install --no-cache-dir -r /app/requirements.txt
-              fi
-              python -m uvicorn app:app --host {{ .Values.langchainDemo.app.host | quote }} --port {{ .Values.langchainDemo.app.port }} --workers {{ .Values.langchainDemo.app.workers }}
+          command:
+            - python
+            - -m
+            - uvicorn
+            - app:app
+            - --host
+            - {{ .Values.langchainDemo.app.host | quote }}
+            - --port
+            - {{ .Values.langchainDemo.app.port | quote }}
+            - --workers
+            - {{ .Values.langchainDemo.app.workers | quote }}
           env:
             - name: OLLAMA_BASE_URL
               value: http://ollama:11434
@@ -71,9 +74,6 @@ spec:
               containerPort: {{ .Values.langchainDemo.app.port }}
           resources:
 {{ toYaml .Values.langchainDemo.resources | indent 12 }}
-          volumeMounts:
-            - name: app-code
-              mountPath: /app
           startupProbe:
             httpGet:
               path: /healthz
@@ -93,8 +93,4 @@ spec:
               port: http
             initialDelaySeconds: 40
             periodSeconds: 20
-      volumes:
-        - name: app-code
-          configMap:
-            name: langchain-demo-app
 {{- end }}

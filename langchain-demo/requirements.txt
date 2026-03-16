@@ -1,0 +1,6 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+pydantic==2.10.6
+langchain==0.3.21
+langchain-ollama==0.3.0
+langsmith==0.3.18

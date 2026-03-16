@@ -12,6 +12,9 @@ rendered.yaml
 *.log
 *.tmp
 .cache/
+/.local-backups/
+/files/pre-change-snapshots/
+/files/post-change-snapshots/
 # Helm build outputs
 charts/*.tgz
 # Large model/data artifacts (keep out of git)

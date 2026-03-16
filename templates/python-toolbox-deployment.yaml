@@ -1,0 +1,62 @@
+{{- if .Values.pythonToolbox.enabled }}
+{{- $langsmithConfigured := and .Values.langsmith.enabled (or (ne (trim .Values.langsmith.apiKey) "") (ne (trim .Values.langsmith.existingSecret) "")) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-toolbox
+  namespace: {{ include "llm-observability-stack.namespace" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: python-toolbox
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: python-toolbox
+    spec:
+{{- if .Values.pythonToolbox.runtimeClassName }}
+      runtimeClassName: {{ .Values.pythonToolbox.runtimeClassName }}
+{{- end }}
+      containers:
+        - name: toolbox
+          image: {{ .Values.pythonToolbox.image.repository }}:{{ .Values.pythonToolbox.image.tag }}
+          imagePullPolicy: {{ .Values.pythonToolbox.image.pullPolicy }}
+          command:
+{{ toYaml .Values.pythonToolbox.command | indent 12 }}
+          env:
+            - name: OLLAMA_BASE_URL
+              value: http://ollama:11434
+            - name: OLLAMA_MODEL
+              value: {{ .Values.ollamaModel.name | quote }}
+            - name: LANGSMITH_ENDPOINT
+              value: {{ .Values.langsmith.endpoint | quote }}
+            - name: LANGCHAIN_ENDPOINT
+              value: {{ .Values.langsmith.endpoint | quote }}
+            - name: LANGSMITH_PROJECT
+              value: {{ .Values.langsmith.project | quote }}
+            - name: LANGCHAIN_PROJECT
+              value: {{ .Values.langsmith.project | quote }}
+            - name: REDIS_HOST
+              value: open-webui-redis
+            - name: REDIS_PORT
+              value: "6379"
+{{- if $langsmithConfigured }}
+            - name: LANGSMITH_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "llm-observability-stack.langsmithSecretName" . }}
+                  key: {{ .Values.langsmith.existingSecretKey }}
+            - name: LANGCHAIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "llm-observability-stack.langsmithSecretName" . }}
+                  key: {{ .Values.langsmith.existingSecretKey }}
+{{- end }}
+{{- range .Values.pythonToolbox.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+{{- end }}
+          resources:
+{{ toYaml .Values.pythonToolbox.resources | indent 12 }}
+{{- end }}

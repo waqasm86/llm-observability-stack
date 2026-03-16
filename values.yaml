@@ -10,7 +10,9 @@ notes:
 
 nvidia:
   runtimeClassName: nvidia
+  # Use nvidia.com/gpu.shared on MPS-enabled nodes.
   gpuResourceName: nvidia.com/gpu
+  # Keep at 1 for MPS shared mode unless your device-plugin config explicitly allows >1 per pod.
   gpuCount: 1
 
 langsmith:
@@ -72,11 +74,14 @@ ollama:
   replicaCount: 1
   runtimeClassName: nvidia
   image:
+    repository: ollama/ollama
+    tag: 0.17.7
     pullPolicy: IfNotPresent
   ollama:
     gpu:
       enabled: true
       type: nvidia
+      # Keep at 1 for most MPS shared configurations.
       number: 1
       nvidiaResource: nvidia.com/gpu
     models:
@@ -131,6 +136,10 @@ openWebUI:
 open-webui:
   enabled: true
   fullnameOverride: open-webui
+  image:
+    repository: ghcr.io/open-webui/open-webui
+    tag: 0.8.10
+    pullPolicy: IfNotPresent
   ollama:
     enabled: false
   pipelines:
@@ -179,17 +188,9 @@ langchainDemo:
   enabled: true
   nameOverride: langchain-demo
   image:
-    repository: python
-    tag: 3.11-slim
+    repository: langchain-demo
+    tag: 0.1.0
     pullPolicy: IfNotPresent
-  installPackagesOnStartup: true
-  packages:
-    - fastapi==0.115.12
-    - uvicorn[standard]==0.34.0
-    - pydantic==2.10.6
-    - langchain==0.3.21
-    - langchain-ollama==0.3.0
-    - langsmith==0.3.18
   app:
     host: 0.0.0.0
     port: 8000
@@ -207,7 +208,27 @@ langchainDemo:
   extraEnv: []
 
 
+pythonToolbox:
+  enabled: true
+  runtimeClassName: ""
+  image:
+    repository: python-toolbox
+    tag: 0.2.0
+    pullPolicy: IfNotPresent
+  command:
+    - sleep
+    - infinity
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+  extraEnv: []
+
 etcd:
+  # Keep disabled unless you are actively testing a backing-store failure scenario.
   enabled: false
   fullnameOverride: etcd
   replicaCount: 1
