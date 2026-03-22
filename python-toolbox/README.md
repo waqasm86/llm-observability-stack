@@ -1,6 +1,6 @@
 # python-toolbox
 
-A small in-cluster Python toolbox for interview triage and Kubernetes networking checks.
+A small in-cluster Python toolbox for Kubernetes networking checks.
 
 Status in the default local profile:
 

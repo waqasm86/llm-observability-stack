@@ -38,7 +38,7 @@ The demo app is now intended to run from a prebuilt local image:
 - faster startup
 - repeatable pod behavior
 - less dependence on internet/package index availability
-- stronger support-engineering story during interviews
+- stronger support-engineering story
 
 The chart also now:
 
@@ -120,7 +120,7 @@ Open WebUI now routes Ollama traffic through a traced proxy path in `langchain-d
 This keeps Open WebUI behavior Ollama-compatible while emitting LangSmith runs for chat requests.
 
 
-## Python toolbox for interview triage
+## Python toolbox
 
 `python-toolbox` is optional and currently disabled in the local profile to reduce RAM usage.
 
