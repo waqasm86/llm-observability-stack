@@ -7,9 +7,8 @@ type: application
 version: 0.1.0
 appVersion: "1.0.0"
 kubeVersion: ">=1.27.0-0"
-home: https://github.com/llamatelemetry/llamatelemetry
+home: https://github.com/waqasm86/llm-observability-stack
 sources:
-  - https://github.com/llamatelemetry/llamatelemetry
   - https://github.com/otwld/ollama-helm
   - https://github.com/open-webui/helm-charts
 maintainers:
