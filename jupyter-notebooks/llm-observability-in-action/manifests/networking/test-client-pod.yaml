@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: k8s-net-debug
+  namespace: llm-observability
+  labels:
+    app: k8s-net-debug
+spec:
+  restartPolicy: Never
+  containers:
+    - name: debug
+      image: busybox:1.36
+      command:
+        - /bin/sh
+        - -lc
+        - sleep 3600
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 128Mi

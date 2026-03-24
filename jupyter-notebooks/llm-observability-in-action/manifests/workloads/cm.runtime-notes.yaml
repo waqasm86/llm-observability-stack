@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: runtime-notes
+  namespace: llm-observability
+  labels:
+    app.kubernetes.io/name: llm-observability-in-action
+    app.kubernetes.io/component: tutorial-data
+data:
+  notes: |
+    Runtime notes for llm-observability in-action checks.
+    Safe to create and update in local clusters.

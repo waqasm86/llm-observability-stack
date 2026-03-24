@@ -89,6 +89,19 @@ langchainDemo:
     repository: langchain-demo
     tag: 0.1.1
     pullPolicy: IfNotPresent
+  app:
+    workers: 2
+  probes:
+    startup:
+      timeoutSeconds: 3
+      failureThreshold: 60
+    readiness:
+      timeoutSeconds: 3
+      failureThreshold: 6
+    liveness:
+      initialDelaySeconds: 60
+      timeoutSeconds: 3
+      failureThreshold: 6
   appFromConfigMap:
     enabled: true
   service:

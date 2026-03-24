@@ -1,45 +1,60 @@
 # Documentation Index
 
-This folder contains complete project documentation for `llm-observability-stack`.
+This directory contains the long-form documentation for `llm-observability-stack`. The intent is to keep the top-level [README.md](../README.md) fast to scan while preserving deeper operational, architectural, and workflow guidance here.
 
-Current local profile notes (March 2026):
+Current local profile notes:
 
-- `open-webui` is exposed for browser use.
-- `ollama` and `langchain-demo` are internal `ClusterIP` by default.
-- `pythonToolbox` and `langsmithDashboardSeeder` are disabled by default to avoid background load.
+- `open-webui` is the main browser entrypoint
+- `ollama` and `langchain-demo` are internal `ClusterIP` services by default
+- `pythonToolbox.enabled: true`
+- `langsmithDashboardSeeder.enabled: false`
 
-## Core docs
+## Start Here
 
+1. [QUICKSTART.md](QUICKSTART.md)
+2. [ARCHITECTURE.md](ARCHITECTURE.md)
+3. [OPERATIONS-RUNBOOK.md](OPERATIONS-RUNBOOK.md)
+4. [NOTEBOOKS-GUIDE.md](NOTEBOOKS-GUIDE.md)
+5. [PROJECT-DOCUMENTATION.md](PROJECT-DOCUMENTATION.md)
+
+## Core Guides
+
+- [QUICKSTART.md](QUICKSTART.md)
+  - Fast local setup for k3s, values files, image build/import, install, and first validation.
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+  - Component ownership, request paths, service exposure, and configuration boundaries.
+- [OPERATIONS-RUNBOOK.md](OPERATIONS-RUNBOOK.md)
+  - Day-0 and day-1 tasks: deploy, verify, port-forward, rebuild images, debug, and clean up.
+- [NOTEBOOKS-GUIDE.md](NOTEBOOKS-GUIDE.md)
+  - Walkthrough of notebooks `01` through `10`, their prerequisites, and common execution pitfalls.
 - [PROJECT-DOCUMENTATION.md](PROJECT-DOCUMENTATION.md)
-  - End-to-end project guide: architecture, components, values flow, deployment, operations, and troubleshooting.
-- [KUBECTL-COMMAND-REFERENCE.md](KUBECTL-COMMAND-REFERENCE.md)
-  - Extensive `kubectl` reference for day-0 and day-1 operations.
-- [KUBERNETES-NETWORKING.md](KUBERNETES-NETWORKING.md)
-  - Deep networking documentation for this stack: Services, DNS, Endpoints, traffic path, and troubleshooting.
-- [PYTHON-KUBERNETES-AUTOMATION.md](PYTHON-KUBERNETES-AUTOMATION.md)
-  - Python automation guide using the `kubernetes` pip package, with ready-to-run scripts.
+  - Full repository documentation, component walkthroughs, and deployment model.
+- [PROJECT-ANALYSIS.md](PROJECT-ANALYSIS.md)
+  - Current-state summary and hardening priorities.
 
-## Existing docs
+## Kubernetes and Automation Guides
+
+- [KUBERNETES-NETWORKING.md](KUBERNETES-NETWORKING.md)
+  - Service, EndpointSlice, DNS, ServiceLB, and traffic-path documentation for this stack.
+- [KUBECTL-COMMAND-REFERENCE.md](KUBECTL-COMMAND-REFERENCE.md)
+  - High-signal `kubectl` command catalog for local operations.
+- [PYTHON-KUBERNETES-AUTOMATION.md](PYTHON-KUBERNETES-AUTOMATION.md)
+  - Kubernetes Python client usage patterns and script-driven inspection.
+
+## Git and Publishing
 
 - [GITHUB-PUBLISHING.md](GITHUB-PUBLISHING.md)
-  - GitHub publishing workflow and safeguards.
-- [PROJECT-ANALYSIS.md](PROJECT-ANALYSIS.md)
-  - Current state summary and hardening priorities.
+  - Remote setup, safe publishing workflow, and repo hygiene guidance.
 
-## Scripts
+## Supporting Script Docs
 
 - [scripts/README.md](scripts/README.md)
-  - Script inventory and quick usage.
-- [scripts/network_inventory.py](scripts/network_inventory.py)
-  - Lists Pods, Services, Endpoints, EndpointSlices, and NetworkPolicies.
-- [scripts/service_path_inspector.py](scripts/service_path_inspector.py)
-  - Traces one Service to selected Pods and endpoint addresses.
-- [scripts/watch_endpoints.py](scripts/watch_endpoints.py)
-  - Watches endpoint changes for one Service in near real-time.
+  - Inventory of standalone helper scripts in `docs/scripts/`.
 
-## Suggested reading order
+## Related Component Docs
 
-1. `PROJECT-DOCUMENTATION.md`
-2. `KUBERNETES-NETWORKING.md`
-3. `KUBECTL-COMMAND-REFERENCE.md`
-4. `PYTHON-KUBERNETES-AUTOMATION.md`
+- [../langchain-demo/README.md](../langchain-demo/README.md)
+- [../python-toolbox/README.md](../python-toolbox/README.md)
+- [../hack/README.md](../hack/README.md)
+- [../jupyter-notebooks/README.md](../jupyter-notebooks/README.md)
+- [../jupyter-notebooks/llm-observability-in-action/README.md](../jupyter-notebooks/llm-observability-in-action/README.md)

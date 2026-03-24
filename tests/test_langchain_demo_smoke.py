@@ -91,12 +91,22 @@ def test_ollama_proxy_forwards_non_streaming_requests(monkeypatch: pytest.Monkey
         def json() -> dict[str, bool]:
             return {"ok": True}
 
-    def fake_request(**kwargs):
-        captured.update(kwargs)
-        return FakeResponse()
+    class FakeAsyncClient:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            captured["client_init"] = kwargs
+
+        async def __aenter__(self) -> "FakeAsyncClient":
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb) -> None:  # type: ignore[no-untyped-def]
+            return None
+
+        async def request(self, **kwargs: object) -> FakeResponse:
+            captured.update(kwargs)
+            return FakeResponse()
 
     monkeypatch.setenv("OLLAMA_UPSTREAM_BASE_URL", "http://ollama:11434")
-    monkeypatch.setattr(app_module.requests, "request", fake_request)
+    monkeypatch.setattr(app_module.httpx, "AsyncClient", FakeAsyncClient)
 
     with TestClient(app_module.app) as client:
         resp = client.post(
@@ -109,18 +119,77 @@ def test_ollama_proxy_forwards_non_streaming_requests(monkeypatch: pytest.Monkey
     assert resp.json() == {"ok": True}
     assert captured["url"] == "http://ollama:11434/api/chat?trace_id=abc"
     assert captured["method"] == "POST"
-    assert captured["timeout"] == (10, 180.0)
-    assert isinstance(captured["data"], (bytes, bytearray))
+    client_init = captured["client_init"]
+    assert isinstance(client_init, dict)
+    assert "timeout" in client_init
+    assert isinstance(captured["content"], (bytes, bytearray))
     headers = captured["headers"]
     assert isinstance(headers, dict)
     assert "host" not in {k.lower() for k in headers.keys()}
 
 
-def test_ollama_proxy_surfaces_upstream_failures(monkeypatch: pytest.MonkeyPatch) -> None:
-    def fake_request(**_: object) -> object:
-        raise app_module.requests.RequestException("network-failure")
+def test_ollama_proxy_forwards_streaming_requests(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
 
-    monkeypatch.setattr(app_module.requests, "request", fake_request)
+    class FakeStreamResponse:
+        status_code = 200
+        headers = {"content-type": "application/x-ndjson"}
+
+        async def aiter_bytes(self, chunk_size: int = 8192):  # type: ignore[no-untyped-def]
+            _ = chunk_size
+            for chunk in [b'{"token":"hello"}\n', b'{"token":"world"}\n']:
+                yield chunk
+
+        async def aclose(self) -> None:
+            captured["response_closed"] = True
+
+    class FakeAsyncClient:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            captured["client_init"] = kwargs
+
+        def build_request(self, **kwargs: object) -> dict[str, object]:
+            captured["build_request"] = kwargs
+            return {"built": True, **kwargs}
+
+        async def send(self, request: object, stream: bool = False) -> FakeStreamResponse:
+            captured["send_request"] = request
+            captured["send_stream"] = stream
+            return FakeStreamResponse()
+
+        async def aclose(self) -> None:
+            captured["client_closed"] = True
+
+    monkeypatch.setenv("OLLAMA_UPSTREAM_BASE_URL", "http://ollama:11434")
+    monkeypatch.setattr(app_module.httpx, "AsyncClient", FakeAsyncClient)
+
+    with TestClient(app_module.app) as client:
+        resp = client.post(
+            "/ollama/api/chat",
+            json={"stream": True, "messages": [{"role": "user", "content": "hello"}]},
+        )
+
+    assert resp.status_code == 200
+    assert resp.content == b'{"token":"hello"}\n{"token":"world"}\n'
+    assert captured["send_stream"] is True
+    assert captured["response_closed"] is True
+    assert captured["client_closed"] is True
+
+
+def test_ollama_proxy_surfaces_upstream_failures(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FailingAsyncClient:
+        async def __aenter__(self) -> "FailingAsyncClient":
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb) -> None:  # type: ignore[no-untyped-def]
+            return None
+
+        async def request(self, **_: object) -> object:
+            raise app_module.httpx.RequestError(
+                "network-failure",
+                request=app_module.httpx.Request("POST", "http://ollama:11434/api/chat"),
+            )
+
+    monkeypatch.setattr(app_module.httpx, "AsyncClient", lambda *args, **kwargs: FailingAsyncClient())
 
     with TestClient(app_module.app) as client:
         resp = client.post("/ollama/api/chat", json={"stream": False})

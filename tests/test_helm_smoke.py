@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -77,6 +78,35 @@ def test_helm_install_dry_run_client_succeeds() -> None:
     assert install.returncode == 0, _combined_output(install)
     assert "llm-observability-smoke" in install.stdout
     assert namespace in install.stdout
+
+
+@pytest.mark.skipif(shutil.which("helm") is None, reason="helm binary is not available")
+def test_helm_package_stays_below_secret_limit_budget(tmp_path: Path) -> None:
+    package = _run(["helm", "package", ".", "-d", str(tmp_path)])
+    assert package.returncode == 0, _combined_output(package)
+
+    archive = next(tmp_path.glob("llm-observability-stack-*.tgz"))
+    assert archive.stat().st_size < 900_000
+
+    with tarfile.open(archive, "r:gz") as tgz:
+        names = tgz.getnames()
+
+    forbidden_prefixes = [
+        "llm-observability-stack/.git/",
+        "llm-observability-stack/jupyter-notebooks-2/",
+        "llm-observability-stack/docs/",
+        "llm-observability-stack/tests/",
+    ]
+    for prefix in forbidden_prefixes:
+        assert not any(name.startswith(prefix) for name in names), prefix
+
+    required_files = [
+        "llm-observability-stack/langchain-demo/app.py",
+        "llm-observability-stack/python-toolbox/examples/langsmith_inference_traces.py",
+        "llm-observability-stack/python-toolbox/examples/langsmith_dashboard_seed_every_5m.py",
+    ]
+    for required_file in required_files:
+        assert required_file in names, required_file
 
 
 @pytest.mark.skipif(shutil.which("helm") is None, reason="helm binary is not available")

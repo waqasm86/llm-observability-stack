@@ -1,5 +1,7 @@
 # Local secrets and machine-specific overrides
 values.local-k3s.yaml
+values.local-*.yaml
+!values.local-*.example.yaml
 .webui_secret_key
 .env
 .env.*
@@ -10,9 +12,11 @@ values.local-k3s.yaml
 # Generated render/debug artifacts
 rendered.yaml
 rendered-*.yaml
+manifests.yaml
 *.log
 *.tmp
 .cache/
+.pytest_cache/
 /.local-backups/
 /.planning/
 /files/pre-change-snapshots/
@@ -21,6 +25,7 @@ llm-observability-files-folders.txt
 pictures/
 # Helm build outputs
 charts/*.tgz
+charts/**/*.tgz
 # Large model/data artifacts (keep out of git)
 *.gguf
 *.safetensors
@@ -32,10 +37,17 @@ data/
 # Python cache
 __pycache__/
 *.pyc
+# Notebook and generated local tutorial artifacts
+**/.ipynb_checkpoints/
+jupyter-notebooks/generated/
+jupyter-notebooks-2/
+jupyter-notebooks/python3.11-pip-list.txt
 # Editor/OS
 .DS_Store
 .idea/
 .vscode/
 rendered-with-etcd.yaml
+/manifests-*.yaml
 *.secret.yaml
 *.private.yaml
+jupyter-notebooks/python*-pip-list.txt

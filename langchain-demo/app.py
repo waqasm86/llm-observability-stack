@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
-import requests
+import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 from langchain_ollama import ChatOllama
@@ -158,7 +158,7 @@ def finish_proxy_trace(
         return
 
 
-def extract_response_payload(resp: requests.Response) -> dict[str, Any]:
+def extract_response_payload(resp: Any) -> dict[str, Any]:
     content_type = resp.headers.get("content-type", "")
     if "application/json" in content_type:
         try:
@@ -260,25 +260,30 @@ async def ollama_proxy(upstream_path: str, request: Request):
 
     stream_requested = bool(isinstance(body_json, dict) and body_json.get("stream") is True)
     timeout_seconds = get_proxy_timeout_seconds()
+    timeout = httpx.Timeout(timeout_seconds, connect=10.0)
 
     try:
         if stream_requested:
-            upstream_response = requests.request(
+            async_client = httpx.AsyncClient(timeout=timeout)
+            upstream_request = async_client.build_request(
                 method=request.method,
                 url=upstream_url,
                 headers=proxy_headers,
-                data=request_body or None,
-                stream=True,
-                timeout=(10, timeout_seconds),
+                content=request_body or None,
             )
-
+            try:
+                upstream_response = await async_client.send(upstream_request, stream=True)
+            except httpx.HTTPError:
+                await async_client.aclose()
+                raise
             content_type = upstream_response.headers.get("content-type", "application/octet-stream")
+            upstream_status_code = upstream_response.status_code
 
-            def iter_stream():
+            async def iter_stream():
                 preview_parts: list[str] = []
                 preview_chars = 0
                 try:
-                    for chunk in upstream_response.iter_content(chunk_size=8192):
+                    async for chunk in upstream_response.aiter_bytes(chunk_size=8192):
                         if not chunk:
                             continue
                         if preview_chars < TRACE_PREVIEW_LIMIT:
@@ -291,34 +296,35 @@ async def ollama_proxy(upstream_path: str, request: Request):
                     finish_proxy_trace(
                         client,
                         run_id,
-                        upstream_response.status_code,
+                        upstream_status_code,
                         outputs={"streamed": True, "response_preview": "".join(preview_parts)},
                     )
                 except Exception as exc:
                     finish_proxy_trace(
                         client,
                         run_id,
-                        upstream_response.status_code,
+                        upstream_status_code,
                         outputs={"streamed": True},
                         error=str(exc),
                     )
                     raise
                 finally:
-                    upstream_response.close()
+                    await upstream_response.aclose()
+                    await async_client.aclose()
 
             return StreamingResponse(
                 iter_stream(),
                 media_type=content_type,
-                status_code=upstream_response.status_code,
+                status_code=upstream_status_code,
             )
 
-        upstream_response = requests.request(
-            method=request.method,
-            url=upstream_url,
-            headers=proxy_headers,
-            data=request_body or None,
-            timeout=(10, timeout_seconds),
-        )
+        async with httpx.AsyncClient(timeout=timeout) as async_client:
+            upstream_response = await async_client.request(
+                method=request.method,
+                url=upstream_url,
+                headers=proxy_headers,
+                content=request_body or None,
+            )
 
         finish_proxy_trace(
             client,
@@ -331,6 +337,6 @@ async def ollama_proxy(upstream_path: str, request: Request):
             status_code=upstream_response.status_code,
             media_type=upstream_response.headers.get("content-type"),
         )
-    except requests.RequestException as exc:
+    except httpx.HTTPError as exc:
         finish_proxy_trace(client, run_id, None, error=str(exc))
         raise HTTPException(status_code=502, detail=f"Ollama proxy request failed: {exc}") from exc

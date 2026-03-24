@@ -28,11 +28,10 @@ helm template llm-observability-stack . >/tmp/rendered-default.yaml
 helm template llm-observability-stack . -f values.local-k3s.example.yaml >/tmp/rendered-local.yaml
 ```
 
-Commit and push:
+Stage, commit, and push:
 
 ```bash
-git add README.md .gitignore values.yaml values.local-k3s.example.yaml templates/ \
-  .github/ docs/ python-toolbox/ CONTRIBUTING.md SECURITY.md SUPPORT.md CODE_OF_CONDUCT.md .helmignore
+git add .
 git commit -m "docs: refresh GitHub guidance and harden local values workflow"
 git push origin main
 ```
@@ -57,6 +56,16 @@ Do not commit:
 - local screenshots in `pictures/`
 
 These are blocked by `.gitignore` and `.helmignore`.
+
+## Current repository hygiene notes
+
+Before `git add .`, make sure these remain ignored or intentionally excluded:
+
+- `values.local-k3s.yaml`
+- notebook checkpoint directories
+- generated notebook artifacts
+- duplicated local working directories such as `jupyter-notebooks-2/`
+- rendered manifests and private debug dumps
 
 ## Size guard
 

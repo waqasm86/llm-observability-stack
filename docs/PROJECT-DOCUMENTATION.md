@@ -1,5 +1,11 @@
 # llm-observability-stack: Complete Project Documentation
 
+Use this document as the deep reference after the focused guides:
+
+- [QUICKSTART.md](QUICKSTART.md)
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [OPERATIONS-RUNBOOK.md](OPERATIONS-RUNBOOK.md)
+
 ## 1. Purpose and Scope
 
 `llm-observability-stack` is an umbrella Helm chart for local single-node Kubernetes (k3s) deployments with NVIDIA GPU support.

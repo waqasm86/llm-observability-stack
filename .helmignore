@@ -14,8 +14,66 @@ rendered.yaml
 rendered-with-etcd.yaml
 *.log
 *.tmp
+.pytest_cache/
 
 # Local model artifacts (prevent Helm chart load failures)
 *.gguf
 gguf-models/
 models/
+
+# Non-runtime repository assets (avoid oversized Helm release payloads)
+.git/
+.ipynb_checkpoints/
+jupyter-notebooks/
+jupyter-notebooks-2/
+docs/
+tests/
+.github/
+pictures/
+hack/
+README.md
+CONTRIBUTING.md
+SECURITY.md
+SUPPORT.md
+CODE_OF_CONDUCT.md
+llm-observability-files-folders.txt
+requirements-test.txt
+manifests.yaml
+values.local-k3s.example.yaml
+
+# Keep only chart-consumed source files from local app/tooling trees
+langchain-demo/.dockerignore
+langchain-demo/Dockerfile
+langchain-demo/requirements.txt
+langchain-demo/__pycache__/
+python-toolbox/Dockerfile
+python-toolbox/README.md
+python-toolbox/requirements.txt
+python-toolbox/examples/__pycache__/
+python-toolbox/examples/langsmith_healthcheck.py
+python-toolbox/examples/ollama_smoke.py
+python-toolbox/examples/redis_ping.py
+python-toolbox/examples/service_dns_check.py
+
+# Vendored chart docs/assets are not needed at install time
+charts/ollama/README.md
+charts/ollama/LICENSE
+charts/ollama/artifacthub-repo.yml
+charts/ollama/update-cli.yaml
+charts/ollama/banner.png
+charts/open-webui/README.md
+charts/open-webui/README.md.gotmpl
+charts/open-webui/CHANGELOG.md
+charts/open-webui/values-gke-min.yaml
+charts/open-webui/charts/ollama/README.md
+charts/open-webui/charts/ollama/LICENSE
+charts/open-webui/charts/ollama/artifacthub-repo.yml
+charts/open-webui/charts/ollama/update-cli.yaml
+charts/open-webui/charts/ollama/banner.png
+charts/open-webui/charts/pipelines/README.md
+charts/open-webui/charts/pipelines/README.md.gotmpl
+charts/open-webui/charts/pipelines/CHANGELOG.md
+charts/open-webui/charts/tika/README.md
+charts/open-webui/charts/tika/LICENSE.txt
+charts/open-webui/charts/tika/artifacthub-repo.yml
+charts/open-webui/charts/tika/.github/

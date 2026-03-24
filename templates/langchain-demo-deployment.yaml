@@ -1,6 +1,10 @@
 {{- if .Values.langchainDemo.enabled }}
 {{- $langsmithConfigured := and .Values.langsmith.enabled (or (ne (trim .Values.langsmith.apiKey) "") (ne (trim .Values.langsmith.existingSecret) "")) -}}
 {{- $langsmithTracing := and $langsmithConfigured (default false .Values.langsmith.tracing) -}}
+{{- $probes := .Values.langchainDemo.probes | default dict -}}
+{{- $startupProbe := get $probes "startup" | default dict -}}
+{{- $readinessProbe := get $probes "readiness" | default dict -}}
+{{- $livenessProbe := get $probes "liveness" | default dict -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -82,25 +86,36 @@ spec:
               containerPort: {{ .Values.langchainDemo.app.port }}
           resources:
 {{ toYaml .Values.langchainDemo.resources | indent 12 }}
+{{- if (default true (get $startupProbe "enabled")) }}
           startupProbe:
             httpGet:
-              path: /healthz
+              path: {{ default "/healthz" (get $startupProbe "path") }}
               port: http
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            failureThreshold: 36
+            initialDelaySeconds: {{ default 30 (get $startupProbe "initialDelaySeconds") }}
+            periodSeconds: {{ default 10 (get $startupProbe "periodSeconds") }}
+            timeoutSeconds: {{ default 3 (get $startupProbe "timeoutSeconds") }}
+            failureThreshold: {{ default 60 (get $startupProbe "failureThreshold") }}
+{{- end }}
+{{- if (default true (get $readinessProbe "enabled")) }}
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: {{ default "/healthz" (get $readinessProbe "path") }}
               port: http
-            initialDelaySeconds: 20
-            periodSeconds: 10
+            initialDelaySeconds: {{ default 20 (get $readinessProbe "initialDelaySeconds") }}
+            periodSeconds: {{ default 10 (get $readinessProbe "periodSeconds") }}
+            timeoutSeconds: {{ default 3 (get $readinessProbe "timeoutSeconds") }}
+            failureThreshold: {{ default 6 (get $readinessProbe "failureThreshold") }}
+{{- end }}
+{{- if (default true (get $livenessProbe "enabled")) }}
           livenessProbe:
             httpGet:
-              path: /healthz
+              path: {{ default "/healthz" (get $livenessProbe "path") }}
               port: http
-            initialDelaySeconds: 40
-            periodSeconds: 20
+            initialDelaySeconds: {{ default 60 (get $livenessProbe "initialDelaySeconds") }}
+            periodSeconds: {{ default 20 (get $livenessProbe "periodSeconds") }}
+            timeoutSeconds: {{ default 3 (get $livenessProbe "timeoutSeconds") }}
+            failureThreshold: {{ default 6 (get $livenessProbe "failureThreshold") }}
+{{- end }}
 {{- if .Values.langchainDemo.appFromConfigMap.enabled }}
           volumeMounts:
             - name: app-code

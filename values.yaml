@@ -246,7 +246,32 @@ langchainDemo:
   app:
     host: 0.0.0.0
     port: 8000
-    workers: 1
+    # Keep >1 worker so /healthz remains responsive during long proxy calls.
+    workers: 2
+  probes:
+    startup:
+      enabled: true
+      path: /healthz
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 3
+      # Startup can be slow on constrained local nodes.
+      failureThreshold: 60
+    readiness:
+      enabled: true
+      path: /healthz
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 6
+    liveness:
+      enabled: true
+      path: /healthz
+      # Give in-flight proxy calls more time before liveness restarts.
+      initialDelaySeconds: 60
+      periodSeconds: 20
+      timeoutSeconds: 3
+      failureThreshold: 6
   appFromConfigMap:
     # Mount langchain-demo/app.py from chart files so proxy/tracing code can be updated without rebuilding image.
     enabled: true

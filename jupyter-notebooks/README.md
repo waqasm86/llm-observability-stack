@@ -1,6 +1,6 @@
 # llm-observability-stack Jupyter Tutorials
 
-This directory contains a full 8-notebook progression for your local k3s-based `llm-observability-stack`, from basic checks to advanced troubleshooting and operations.
+This directory contains the main notebook walkthroughs for your local k3s-based `llm-observability-stack`, from basic checks to advanced troubleshooting, networking inspection, and architecture visualization.
 
 ## Notebook Sequence
 
@@ -28,6 +28,18 @@ This directory contains a full 8-notebook progression for your local k3s-based `
 8. **08-troubleshooting-etcd-simulations.ipynb**  
    Provides advanced health matrix diagnostics, memory pressure analysis, Helm render drills for optional components, and ops runbook patterns.
 
+9. **09-k3s-networking-deep-dive.ipynb**  
+   Uses the Kubernetes Python client to map services, EndpointSlices, DNS names, LoadBalancer exposure, `svclb` pods, and in-cluster connectivity across your local k3s stack.
+
+10. **10-k3s-architecture-diagrams.ipynb**  
+   Focuses on architecture visualization and presentation-oriented diagrams for the local stack.
+
+## Supporting Examples
+
+The `llm-observability-stack-example-*.ipynb` notebooks are supporting examples and snapshots, not the primary tutorial path. Use them as side references after working through the core sequence above.
+
+The [llm-observability-in-action](llm-observability-in-action/README.md) subdirectory is a separate companion toolkit with shell scripts, manifests, and Python Kubernetes client examples for deeper cluster inspection outside the notebook flow.
+
 ## Python 3.11 Requirement
 
 All notebooks are authored for **`/usr/local/bin/python3.11`** and use the `python311` kernelspec.
@@ -46,6 +58,22 @@ cd /media/waqasm86/External1/Project-Nvidia-Office/Project-Llamatelemetry/langch
 /usr/local/bin/python3.11 -m jupyter lab
 ```
 
+## Recommended Preflight
+
+Before working through the notebooks:
+
+```bash
+kubectl get all -n llm-observability
+kubectl get svc -n llm-observability
+```
+
+For notebooks that call internal APIs from the host, keep these ready in separate terminals:
+
+```bash
+kubectl port-forward -n llm-observability svc/ollama 11434:11434
+kubectl port-forward -n llm-observability svc/langchain-demo 8000:8000
+```
+
 ## Port-Forward Expectations
 
 Several notebooks assume local access to internal `ClusterIP` services. Keep these in separate terminals when needed:
@@ -54,3 +82,10 @@ Several notebooks assume local access to internal `ClusterIP` services. Keep the
 kubectl port-forward -n llm-observability svc/ollama 11434:11434
 kubectl port-forward -n llm-observability svc/langchain-demo 8000:8000
 ```
+
+Notebook-specific expectations:
+
+- `02`, `03`, `04`, and `06` need `localhost:11434` and/or `localhost:8000`
+- `05` assumes browser access to Open WebUI on `localhost:8080`
+- `07` uses `python-toolbox` in-cluster plus optional `localhost:8000` GPU-correlation checks
+- `09` is mostly API-first and uses the Kubernetes Python client plus `python-toolbox`
