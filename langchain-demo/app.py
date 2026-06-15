@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID, uuid4
@@ -9,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 from langchain_ollama import ChatOllama
 from langsmith import Client
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 from pydantic import BaseModel, Field
 
 APP_TITLE = "k3s-ollama-langsmith-demo"
@@ -22,6 +24,62 @@ TRACE_PREVIEW_LIMIT = 8000
 app = FastAPI(title=APP_TITLE)
 _LANGSMITH_CLIENT: Optional[Client] = None
 _LANGSMITH_CLIENT_UNAVAILABLE = False
+
+HTTP_REQUESTS = Counter(
+    "llm_observability_http_requests_total",
+    "HTTP requests handled by the LLM observability API.",
+    ["method", "route", "status"],
+)
+HTTP_REQUEST_DURATION = Histogram(
+    "llm_observability_http_request_duration_seconds",
+    "End-to-end HTTP request latency.",
+    ["method", "route"],
+    buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120, 300),
+)
+LLM_REQUESTS = Counter(
+    "llm_observability_llm_requests_total",
+    "Completed LLM requests.",
+    ["model", "route", "outcome"],
+)
+LLM_ACTIVE_REQUESTS = Gauge(
+    "llm_observability_llm_active_requests",
+    "LLM requests currently being processed.",
+    ["model", "route"],
+)
+LLM_REQUEST_DURATION = Histogram(
+    "llm_observability_llm_request_duration_seconds",
+    "End-to-end LLM request latency.",
+    ["model", "route"],
+    buckets=(0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 20, 30, 60, 120, 300),
+)
+LLM_TTFT = Histogram(
+    "llm_observability_time_to_first_token_seconds",
+    "Time from proxy request start to the first streamed response bytes.",
+    ["model", "route"],
+    buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 20, 30, 60),
+)
+LLM_ITL = Histogram(
+    "llm_observability_inter_token_latency_seconds",
+    "Average inter-token latency derived from Ollama evaluation duration and token count.",
+    ["model", "route"],
+    buckets=(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5),
+)
+LLM_PROMPT_TOKENS = Counter(
+    "llm_observability_prompt_tokens_total",
+    "Prompt tokens reported by the inference backend.",
+    ["model", "route"],
+)
+LLM_GENERATED_TOKENS = Counter(
+    "llm_observability_generated_tokens_total",
+    "Generated tokens reported by the inference backend.",
+    ["model", "route"],
+)
+LLM_TOKEN_THROUGHPUT = Histogram(
+    "llm_observability_generated_tokens_per_second",
+    "Generated token throughput reported by Ollama.",
+    ["model", "route"],
+    buckets=(0.5, 1, 2, 5, 10, 20, 40, 80, 160, 320),
+)
 
 
 class PromptIn(BaseModel):
@@ -56,6 +114,35 @@ def get_proxy_timeout_seconds() -> float:
 
 def get_ollama_upstream_base_url() -> str:
     return get_env("OLLAMA_UPSTREAM_BASE_URL", get_env("OLLAMA_BASE_URL", DEFAULT_BASE_URL)).rstrip("/")
+
+
+def get_model_name(payload: Optional[Any] = None) -> str:
+    if isinstance(payload, dict) and payload.get("model"):
+        return str(payload["model"])
+    return get_env("OLLAMA_MODEL", DEFAULT_MODEL)
+
+
+def observe_ollama_payload(payload: Optional[Any], model: str, route: str) -> None:
+    if not isinstance(payload, dict):
+        return
+
+    prompt_tokens = payload.get("prompt_eval_count")
+    generated_tokens = payload.get("eval_count")
+    eval_duration_ns = payload.get("eval_duration")
+
+    if isinstance(prompt_tokens, (int, float)) and prompt_tokens >= 0:
+        LLM_PROMPT_TOKENS.labels(model=model, route=route).inc(float(prompt_tokens))
+    if isinstance(generated_tokens, (int, float)) and generated_tokens >= 0:
+        LLM_GENERATED_TOKENS.labels(model=model, route=route).inc(float(generated_tokens))
+    if (
+        isinstance(generated_tokens, (int, float))
+        and isinstance(eval_duration_ns, (int, float))
+        and generated_tokens >= 0
+        and eval_duration_ns > 0
+    ):
+        tokens_per_second = float(generated_tokens) / (float(eval_duration_ns) / 1_000_000_000)
+        LLM_TOKEN_THROUGHPUT.labels(model=model, route=route).observe(tokens_per_second)
+        LLM_ITL.labels(model=model, route=route).observe(1.0 / tokens_per_second)
 
 
 def safe_json(value: bytes) -> Optional[Any]:
@@ -186,6 +273,29 @@ def get_llm() -> ChatOllama:
     )
 
 
+@app.middleware("http")
+async def observe_http_request(request: Request, call_next):  # type: ignore[no-untyped-def]
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    started = time.perf_counter()
+    status_code = 500
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    finally:
+        route = getattr(request.scope.get("route"), "path", request.url.path)
+        HTTP_REQUESTS.labels(
+            method=request.method,
+            route=route,
+            status=str(status_code),
+        ).inc()
+        HTTP_REQUEST_DURATION.labels(method=request.method, route=route).observe(
+            time.perf_counter() - started
+        )
+
+
 @app.get("/")
 def root() -> dict:
     return {
@@ -210,6 +320,11 @@ def healthz() -> dict:
     }
 
 
+@app.get("/metrics", include_in_schema=False)
+def metrics() -> Response:
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
 @app.get("/config")
 def config() -> dict:
     return {
@@ -225,18 +340,29 @@ def config() -> dict:
 
 @app.post("/invoke", response_model=InvokeOut)
 def invoke(req: PromptIn) -> InvokeOut:
+    model = get_model_name()
+    route = "invoke"
+    started = time.perf_counter()
+    LLM_ACTIVE_REQUESTS.labels(model=model, route=route).inc()
     try:
         llm = get_llm()
         prompt = req.prompt if not req.system else f"System: {req.system}\n\nUser: {req.prompt}"
         response = llm.invoke(prompt)
         content = getattr(response, "content", response)
+        response_metadata = getattr(response, "response_metadata", None)
+        observe_ollama_payload(response_metadata, model, route)
+        LLM_REQUESTS.labels(model=model, route=route, outcome="success").inc()
         return InvokeOut(
             response=str(content),
-            model=get_env("OLLAMA_MODEL", DEFAULT_MODEL),
+            model=model,
             ollama_base_url=get_env("OLLAMA_BASE_URL", DEFAULT_BASE_URL),
         )
     except Exception as exc:  # pragma: no cover - runtime surface for demo support drills
+        LLM_REQUESTS.labels(model=model, route=route, outcome="error").inc()
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+    finally:
+        LLM_ACTIVE_REQUESTS.labels(model=model, route=route).dec()
+        LLM_REQUEST_DURATION.labels(model=model, route=route).observe(time.perf_counter() - started)
 
 
 @app.api_route("/ollama/{upstream_path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
@@ -249,6 +375,11 @@ async def ollama_proxy(upstream_path: str, request: Request):
 
     request_body = await request.body()
     body_json = safe_json(request_body)
+    model = get_model_name(body_json)
+    route = "ollama_proxy"
+    started = time.perf_counter()
+    stream_owns_metrics = False
+    LLM_ACTIVE_REQUESTS.labels(model=model, route=route).inc()
     proxy_headers = build_upstream_headers(request)
 
     client, run_id = start_proxy_trace(
@@ -282,10 +413,24 @@ async def ollama_proxy(upstream_path: str, request: Request):
             async def iter_stream():
                 preview_parts: list[str] = []
                 preview_chars = 0
+                stream_buffer = b""
+                final_payload: Optional[Any] = None
+                first_chunk_at: Optional[float] = None
                 try:
                     async for chunk in upstream_response.aiter_bytes(chunk_size=8192):
                         if not chunk:
                             continue
+                        now = time.perf_counter()
+                        if first_chunk_at is None:
+                            first_chunk_at = now
+                            LLM_TTFT.labels(model=model, route=route).observe(now - started)
+                        stream_buffer += chunk
+                        lines = stream_buffer.split(b"\n")
+                        stream_buffer = lines.pop()
+                        for line in lines:
+                            parsed = safe_json(line.strip())
+                            if isinstance(parsed, dict) and parsed.get("done") is True:
+                                final_payload = parsed
                         if preview_chars < TRACE_PREVIEW_LIMIT:
                             decoded = chunk.decode("utf-8", errors="ignore")
                             remaining = TRACE_PREVIEW_LIMIT - preview_chars
@@ -293,6 +438,13 @@ async def ollama_proxy(upstream_path: str, request: Request):
                             preview_parts.append(sample)
                             preview_chars += len(sample)
                         yield chunk
+                    if stream_buffer.strip():
+                        parsed = safe_json(stream_buffer.strip())
+                        if isinstance(parsed, dict) and parsed.get("done") is True:
+                            final_payload = parsed
+                    observe_ollama_payload(final_payload, model, route)
+                    outcome = "success" if upstream_status_code < 500 else "error"
+                    LLM_REQUESTS.labels(model=model, route=route, outcome=outcome).inc()
                     finish_proxy_trace(
                         client,
                         run_id,
@@ -300,6 +452,7 @@ async def ollama_proxy(upstream_path: str, request: Request):
                         outputs={"streamed": True, "response_preview": "".join(preview_parts)},
                     )
                 except Exception as exc:
+                    LLM_REQUESTS.labels(model=model, route=route, outcome="error").inc()
                     finish_proxy_trace(
                         client,
                         run_id,
@@ -309,9 +462,14 @@ async def ollama_proxy(upstream_path: str, request: Request):
                     )
                     raise
                 finally:
+                    LLM_ACTIVE_REQUESTS.labels(model=model, route=route).dec()
+                    LLM_REQUEST_DURATION.labels(model=model, route=route).observe(
+                        time.perf_counter() - started
+                    )
                     await upstream_response.aclose()
                     await async_client.aclose()
 
+            stream_owns_metrics = True
             return StreamingResponse(
                 iter_stream(),
                 media_type=content_type,
@@ -332,11 +490,20 @@ async def ollama_proxy(upstream_path: str, request: Request):
             upstream_response.status_code,
             outputs=extract_response_payload(upstream_response),
         )
+        response_payload = safe_json(upstream_response.content)
+        observe_ollama_payload(response_payload, model, route)
+        outcome = "success" if upstream_response.status_code < 500 else "error"
+        LLM_REQUESTS.labels(model=model, route=route, outcome=outcome).inc()
         return Response(
             content=upstream_response.content,
             status_code=upstream_response.status_code,
             media_type=upstream_response.headers.get("content-type"),
         )
     except httpx.HTTPError as exc:
+        LLM_REQUESTS.labels(model=model, route=route, outcome="error").inc()
         finish_proxy_trace(client, run_id, None, error=str(exc))
         raise HTTPException(status_code=502, detail=f"Ollama proxy request failed: {exc}") from exc
+    finally:
+        if not stream_owns_metrics:
+            LLM_ACTIVE_REQUESTS.labels(model=model, route=route).dec()
+            LLM_REQUEST_DURATION.labels(model=model, route=route).observe(time.perf_counter() - started)

@@ -4,6 +4,9 @@ kind: Service
 metadata:
   name: langchain-demo
   namespace: {{ include "llm-observability-stack.namespace" . }}
+  labels:
+    app.kubernetes.io/name: langchain-demo
+    app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
   type: {{ .Values.langchainDemo.service.type }}
   selector:

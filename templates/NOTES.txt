@@ -1,13 +1,19 @@
-1. This chart assumes the NVIDIA device plugin / gpu-feature-discovery stack is already installed and healthy.
-2. Confirm the GGUF host path exists on the k3s node before install.
+1. GPU workloads require the NVIDIA device plugin and an allocatable GPU resource.
+2. Confirm the GGUF host path exists on every node eligible for Ollama scheduling.
 3. Suggested install:
    helm upgrade --install llm-observability-stack ./llm-observability-stack      -n {{ include "llm-observability-stack.namespace" . }} --create-namespace      -f values.local-k3s.example.yaml
 
 Endpoints after install:
+{{- if .Values.ollama.enabled }}
 - Ollama:      http://ollama:11434
+{{- end }}
+{{- if .Values.openWebUI.enabled }}
 - Open WebUI:  http://open-webui:8080
+{{- end }}
+{{- if .Values.langchainDemo.enabled }}
 - LangChain:   http://langchain-demo:8000
 - Open WebUI traced proxy path: http://langchain-demo:8000/ollama/api/*
+{{- end }}
 {{- if .Values.langsmithDashboardSeeder.enabled }}
 - LangSmith seeder CronJob: langsmith-dashboard-seeder (schedule: {{ .Values.langsmithDashboardSeeder.schedule }})
 {{- end }}

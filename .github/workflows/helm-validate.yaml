@@ -27,6 +27,24 @@ jobs:
       - name: Render local example values
         run: helm template llm-observability-stack . -f values.local-k3s.example.yaml >/tmp/rendered-local.yaml
 
+      - name: Render GeForce 940M profile
+        run: helm template llm-observability-stack . -f values.geforce-940m-k3s.yaml >/tmp/rendered-geforce.yaml
+
+      - name: Render competition profile
+        run: |
+          helm template llm-observability-stack . \
+            -f values.competition-nvidia.example.yaml \
+            --set langsmith.existingSecret= \
+            --set openWebUI.existingSecret= \
+            --set open-webui.webuiSecret.existingSecretName= \
+            >/tmp/rendered-competition.yaml
+
+      - name: Build and validate monitoring chart
+        run: |
+          helm dependency build monitoring
+          helm lint monitoring
+          helm template llm-monitoring monitoring >/tmp/rendered-monitoring.yaml
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

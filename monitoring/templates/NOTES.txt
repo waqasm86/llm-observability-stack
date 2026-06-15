@@ -1,0 +1,2 @@
+Prometheus/Grafana monitoring is installed. Enable monitoring.enabled in the application chart
+after the Prometheus Operator CRDs are established.

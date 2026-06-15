@@ -1,0 +1,29 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {"type": "stat", "title": "Benchmark successful", "id": 1, "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}, "targets": [{"expr": "llm_benchmark_success", "legendFormat": "{{model}}", "refId": "A"}]},
+    {"type": "stat", "title": "Mean tokens / second", "id": 2, "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}, "targets": [{"expr": "llm_benchmark_tokens_per_second", "legendFormat": "{{model}}", "refId": "A"}]},
+    {"type": "stat", "title": "TTFT p50", "id": 3, "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}, "fieldConfig": {"defaults": {"unit": "s"}}, "targets": [{"expr": "llm_benchmark_ttft_seconds{quantile=\"0.50\"}", "legendFormat": "{{model}}", "refId": "A"}]},
+    {"type": "stat", "title": "TTFT p95", "id": 4, "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}, "fieldConfig": {"defaults": {"unit": "s"}}, "targets": [{"expr": "llm_benchmark_ttft_seconds{quantile=\"0.95\"}", "legendFormat": "{{model}}", "refId": "A"}]},
+    {
+      "type": "timeseries", "title": "Model throughput comparison", "id": 5,
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 8},
+      "targets": [{"expr": "llm_benchmark_tokens_per_second", "legendFormat": "{{model}}", "refId": "A"}]
+    },
+    {
+      "type": "timeseries", "title": "End-to-end duration p95", "id": 6,
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 8}, "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [{"expr": "llm_benchmark_duration_seconds{quantile=\"0.95\"}", "legendFormat": "{{model}}", "refId": "A"}]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["benchmark", "llm-observability", "competition"],
+  "templating": {"list": []},
+  "time": {"from": "now-24h", "to": "now"},
+  "timezone": "browser",
+  "title": "LLM Competition Benchmark",
+  "uid": "llm-competition-benchmark",
+  "version": 1
+}

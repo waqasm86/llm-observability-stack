@@ -1,0 +1,60 @@
+{{- if and .Values.monitoring.enabled .Values.monitoring.prometheusRules.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: llm-observability-stack
+  namespace: {{ include "llm-observability-stack.namespace" . }}
+  labels:
+{{ toYaml .Values.monitoring.labels | indent 4 }}
+spec:
+  groups:
+    - name: llm-observability.application
+      rules:
+        - alert: LLMHighErrorRate
+          expr: |
+            100 * sum(rate(llm_observability_llm_requests_total{outcome="error"}[5m]))
+              / clamp_min(sum(rate(llm_observability_llm_requests_total[5m])), 0.001)
+              > {{ .Values.monitoring.prometheusRules.highErrorRatePercent }}
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: LLM request error rate is above the configured threshold
+            runbook_url: https://github.com/waqasm86/llm-observability-stack/blob/main/docs/OPERATIONS-RUNBOOK.md
+        - alert: LLMHighP95Latency
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le) (rate(llm_observability_llm_request_duration_seconds_bucket[5m]))
+            ) > {{ .Values.monitoring.prometheusRules.highP95LatencySeconds }}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: LLM p95 latency is above the configured threshold
+        - alert: LLMServiceProbeFailed
+          expr: probe_success{job="llm-stack-http"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: An LLM stack HTTP endpoint is unavailable
+    - name: llm-observability.nvidia
+      rules:
+        - alert: NVIDIAHighGPUTemperature
+          expr: DCGM_FI_DEV_GPU_TEMP > {{ .Values.monitoring.prometheusRules.gpuHighTemperatureCelsius }}
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: NVIDIA GPU temperature is above the configured threshold
+        - alert: NVIDIAHighFramebufferMemory
+          expr: |
+            100 * DCGM_FI_DEV_FB_USED
+              / clamp_min(DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE, 1)
+              > {{ .Values.monitoring.prometheusRules.gpuHighMemoryPercent }}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: NVIDIA GPU framebuffer memory utilization is high
+{{- end }}

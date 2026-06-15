@@ -2,6 +2,12 @@
 
 This directory contains the long-form documentation for `llm-observability-stack`. The intent is to keep the top-level [README.md](../README.md) fast to scan while preserving deeper operational, architectural, and workflow guidance here.
 
+This documentation is now organized around EdgeLLM Observability: private LLM deployment and
+observability on NVIDIA-powered Linux edge devices using k3s, Helm, GGUF/Ollama,
+LangChain/LangSmith-compatible tracing, Prometheus/Grafana, and NVIDIA GPU metrics. The repository
+is a pilot-ready, production-oriented reference architecture, not a claim of universal laptop or
+customer production readiness.
+
 Current local-profile reference:
 
 - See [CONFIG-PROFILES.md](CONFIG-PROFILES.md) for the canonical defaults and local-example overrides.
@@ -14,6 +20,7 @@ Current local-profile reference:
 4. [OPERATIONS-RUNBOOK.md](OPERATIONS-RUNBOOK.md)
 5. [NOTEBOOKS-GUIDE.md](NOTEBOOKS-GUIDE.md)
 6. [PROJECT-DOCUMENTATION.md](PROJECT-DOCUMENTATION.md)
+7. [competition/README.md](competition/README.md)
 
 ## Core Guides
 
@@ -45,6 +52,17 @@ Current local-profile reference:
 
 - [GITHUB-PUBLISHING.md](GITHUB-PUBLISHING.md)
   - Remote setup, safe publishing workflow, and repo hygiene guidance.
+
+## NVIDIA Inception and Pilot Materials
+
+- [competition/README.md](competition/README.md)
+  - Product positioning, evidence, NVIDIA alignment, and remaining proof targets.
+- [competition/EDGE-VALIDATION-ROADMAP.md](competition/EDGE-VALIDATION-ROADMAP.md)
+  - Hardware and pilot validation phases from GeForce 940M to RTX, DCGM/NIM, and design partners.
+- [competition/EDGE-BUSINESS-MODEL.md](competition/EDGE-BUSINESS-MODEL.md)
+  - Open-source, enterprise pilot, and OEM/SI commercial paths.
+- [competition/LENOVO-OEM-ANGLE.md](competition/LENOVO-OEM-ANGLE.md)
+  - Future OEM validation and sponsorship path without implying current endorsement.
 
 ## Suggested Reading Paths
 

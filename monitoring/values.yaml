@@ -1,0 +1,99 @@
+kube-prometheus-stack:
+  fullnameOverride: kube-prometheus-stack
+  defaultRules:
+    rules:
+      etcd: false
+      kubeControllerManager: false
+      kubeProxy: false
+      kubeSchedulerAlerting: false
+      kubeSchedulerRecording: false
+  kubeControllerManager:
+    enabled: false
+  kubeEtcd:
+    enabled: false
+  kubeProxy:
+    enabled: false
+  kubeScheduler:
+    enabled: false
+  grafana:
+    enabled: true
+    defaultDashboardsEnabled: true
+    persistence:
+      enabled: true
+      type: sts
+      storageClassName: local-path
+      accessModes: [ReadWriteOnce]
+      size: 5Gi
+    sidecar:
+      dashboards:
+        enabled: true
+        searchNamespace: ALL
+      datasources:
+        enabled: true
+  alertmanager:
+    enabled: true
+    alertmanagerSpec:
+      retention: 120h
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: local-path
+            accessModes: [ReadWriteOnce]
+            resources:
+              requests:
+                storage: 2Gi
+      resources:
+        requests: {cpu: 50m, memory: 128Mi}
+        limits: {cpu: 300m, memory: 384Mi}
+  prometheus:
+    prometheusSpec:
+      retention: 3d
+      serviceMonitorSelectorNilUsesHelmValues: false
+      serviceMonitorNamespaceSelector: {}
+      podMonitorSelectorNilUsesHelmValues: false
+      podMonitorNamespaceSelector: {}
+      ruleSelectorNilUsesHelmValues: false
+      ruleNamespaceSelector: {}
+      probeSelectorNilUsesHelmValues: false
+      probeNamespaceSelector: {}
+      resources:
+        requests: {cpu: 250m, memory: 768Mi}
+        limits: {cpu: 1500m, memory: 2Gi}
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: local-path
+            accessModes: [ReadWriteOnce]
+            resources:
+              requests:
+                storage: 10Gi
+  prometheusOperator:
+    resources:
+      requests: {cpu: 50m, memory: 100Mi}
+      limits: {cpu: 500m, memory: 500Mi}
+
+prometheus-blackbox-exporter:
+  fullnameOverride: prometheus-blackbox-exporter
+  releaseLabel: false
+  serviceMonitor:
+    selfMonitor:
+      enabled: true
+  resources:
+    requests: {cpu: 20m, memory: 32Mi}
+    limits: {cpu: 200m, memory: 128Mi}
+  config:
+    modules:
+      http_2xx:
+        prober: http
+        timeout: 10s
+        http:
+          follow_redirects: true
+          preferred_ip_protocol: ip4
+
+prometheus-pushgateway:
+  fullnameOverride: prometheus-pushgateway
+  serviceMonitor:
+    enabled: true
+  resources:
+    requests: {cpu: 20m, memory: 32Mi}
+    limits: {cpu: 200m, memory: 128Mi}

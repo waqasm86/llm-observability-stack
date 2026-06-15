@@ -8,6 +8,58 @@ namespace:
 notes:
   requireNvidiaDevicePlugin: true
 
+monitoring:
+  # Install the separate monitoring/ umbrella chart before enabling these CRs.
+  enabled: false
+  labels:
+    release: kube-prometheus-stack
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+    scrapeTimeout: 10s
+  blackbox:
+    enabled: true
+    proberUrl: http://prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115
+    module: http_2xx
+    interval: 30s
+    targets:
+      - 'http://langchain-demo.{{ .Values.namespace.name }}.svc.cluster.local:8000/healthz'
+      - 'http://ollama.{{ .Values.namespace.name }}.svc.cluster.local:11434/api/tags'
+      - 'http://open-webui.{{ .Values.namespace.name }}.svc.cluster.local:8080/health'
+  prometheusRules:
+    enabled: true
+    highErrorRatePercent: 5
+    highP95LatencySeconds: 10
+    gpuHighTemperatureCelsius: 85
+    gpuHighMemoryPercent: 95
+  grafanaDashboards:
+    enabled: true
+  dcgmExporter:
+    # GPU Operator usually creates this ServiceMonitor itself. Enable only when importing
+    # an exporter Service that is not already discovered by Prometheus.
+    serviceMonitor:
+      enabled: false
+      namespace: gpu-operator
+      interval: 15s
+      port: gpu-metrics
+      path: /metrics
+      selector:
+        app: nvidia-dcgm-exporter
+  nim:
+    # NIM exposes OpenMetrics on /v1/metrics. Set selector labels to match the NIM Service.
+    serviceMonitor:
+      enabled: false
+      namespace: nim-service
+      interval: 15s
+      port: http
+      path: /v1/metrics
+      selector:
+        app.kubernetes.io/name: nim-llm
+
+networkPolicy:
+  enabled: false
+  monitoringNamespace: monitoring
+
 nvidia:
   runtimeClassName: nvidia
   # Use nvidia.com/gpu.shared on MPS-enabled nodes.
@@ -40,6 +92,8 @@ ollamaModel:
     filename: gemma-3-1b-it-gguf.gguf
     mountPath: /models/gguf
   modelfile:
+    # When set, the chart reads this repository file instead of the inline content below.
+    file: Modelfile.gemma-3-1b-it-gguf
     # This template is rendered into a ConfigMap and consumed by the vendored Ollama chart.
     content: |
       FROM __GGUF_PATH__
@@ -239,6 +293,22 @@ redis:
 langchainDemo:
   enabled: true
   nameOverride: langchain-demo
+  serviceAccount:
+    create: true
+    name: ""
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+        - ALL
   image:
     repository: langchain-demo
     tag: 0.1.1
@@ -246,8 +316,8 @@ langchainDemo:
   app:
     host: 0.0.0.0
     port: 8000
-    # Keep >1 worker so /healthz remains responsive during long proxy calls.
-    workers: 2
+    # prometheus-client uses an in-process registry; keep one worker unless multiprocess mode is configured.
+    workers: 1
   probes:
     startup:
       enabled: true

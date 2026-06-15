@@ -1,0 +1,39 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {"type": "stat", "title": "LLM requests / second", "id": 1, "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}, "targets": [{"expr": "sum(rate(llm_observability_llm_requests_total[5m]))", "refId": "A"}]},
+    {"type": "stat", "title": "Error rate", "id": 2, "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}, "fieldConfig": {"defaults": {"unit": "percentunit"}}, "targets": [{"expr": "sum(rate(llm_observability_llm_requests_total{outcome=\"error\"}[5m])) / clamp_min(sum(rate(llm_observability_llm_requests_total[5m])), 0.001)", "refId": "A"}]},
+    {"type": "stat", "title": "Active LLM requests", "id": 3, "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}, "targets": [{"expr": "sum(llm_observability_llm_active_requests)", "refId": "A"}]},
+    {"type": "stat", "title": "Generated tokens / second", "id": 4, "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}, "targets": [{"expr": "sum(rate(llm_observability_generated_tokens_total[5m]))", "refId": "A"}]},
+    {
+      "type": "timeseries", "title": "LLM latency percentiles", "id": 5,
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 8}, "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum by (le) (rate(llm_observability_llm_request_duration_seconds_bucket[5m])))", "legendFormat": "p50", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, sum by (le) (rate(llm_observability_llm_request_duration_seconds_bucket[5m])))", "legendFormat": "p95", "refId": "B"},
+        {"expr": "histogram_quantile(0.99, sum by (le) (rate(llm_observability_llm_request_duration_seconds_bucket[5m])))", "legendFormat": "p99", "refId": "C"}
+      ]
+    },
+    {
+      "type": "timeseries", "title": "TTFT and average inter-token latency p50", "id": 6,
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 8}, "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum by (le) (rate(llm_observability_time_to_first_token_seconds_bucket[5m])))", "legendFormat": "TTFT p50", "refId": "A"},
+        {"expr": "histogram_quantile(0.50, sum by (le) (rate(llm_observability_inter_token_latency_seconds_bucket[5m])))", "legendFormat": "ITL p50", "refId": "B"}
+      ]
+    },
+    {"type": "heatmap", "title": "TTFT distribution", "id": 7, "gridPos": {"h": 9, "w": 12, "x": 0, "y": 17}, "targets": [{"expr": "sum by (le) (rate(llm_observability_time_to_first_token_seconds_bucket[5m]))", "format": "heatmap", "refId": "A"}]},
+    {"type": "timeseries", "title": "Endpoint availability", "id": 8, "gridPos": {"h": 9, "w": 12, "x": 12, "y": 17}, "fieldConfig": {"defaults": {"min": 0, "max": 1}}, "targets": [{"expr": "probe_success{job=\"llm-stack-http\"}", "legendFormat": "{{instance}}", "refId": "A"}]}
+  ],
+  "refresh": "10s",
+  "schemaVersion": 41,
+  "tags": ["llm-observability", "nvidia", "competition"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timezone": "browser",
+  "title": "LLM Observability Overview",
+  "uid": "llm-observability-overview",
+  "version": 1
+}

@@ -56,6 +56,11 @@ def test_root_and_healthz_endpoints() -> None:
         assert health["ollama_base_url"] == "http://ollama:11434"
         assert health["ollama_upstream_base_url"] == "http://ollama:11434"
 
+        metrics_resp = client.get("/metrics")
+        assert metrics_resp.status_code == 200
+        assert "llm_observability_http_requests_total" in metrics_resp.text
+        assert "llm_observability_llm_request_duration_seconds" in metrics_resp.text
+
 
 def test_invoke_success_and_error_paths(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeLLM:
@@ -173,6 +178,11 @@ def test_ollama_proxy_forwards_streaming_requests(monkeypatch: pytest.MonkeyPatc
     assert captured["send_stream"] is True
     assert captured["response_closed"] is True
     assert captured["client_closed"] is True
+
+    with TestClient(app_module.app) as client:
+        metrics = client.get("/metrics").text
+    assert "llm_observability_time_to_first_token_seconds_count" in metrics
+    assert 'route="ollama_proxy"' in metrics
 
 
 def test_ollama_proxy_surfaces_upstream_failures(monkeypatch: pytest.MonkeyPatch) -> None:

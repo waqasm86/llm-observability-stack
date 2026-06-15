@@ -2,6 +2,14 @@
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
+{{- define "llm-observability-stack.langchainServiceAccountName" -}}
+{{- if .Values.langchainDemo.serviceAccount.create -}}
+{{- default "langchain-demo" .Values.langchainDemo.serviceAccount.name -}}
+{{- else -}}
+{{- default "default" .Values.langchainDemo.serviceAccount.name -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "llm-observability-stack.fullname" -}}
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}

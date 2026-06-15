@@ -31,6 +31,8 @@ tests/
 .github/
 pictures/
 hack/
+monitoring/
+benchmarks/
 README.md
 CONTRIBUTING.md
 SECURITY.md
@@ -40,6 +42,7 @@ llm-observability-files-folders.txt
 requirements-test.txt
 manifests.yaml
 values.local-k3s.example.yaml
+values.geforce-940m-k3s.yaml
 
 # Keep only chart-consumed source files from local app/tooling trees
 langchain-demo/.dockerignore

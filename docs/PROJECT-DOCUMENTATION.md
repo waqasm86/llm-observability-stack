@@ -1,4 +1,8 @@
-# llm-observability-stack: Complete Project Documentation
+# EdgeLLM Observability Platform: Complete Project Documentation
+
+This documentation is now organized around EdgeLLM Observability: private LLM deployment and
+observability on NVIDIA-powered Linux edge devices using k3s, Helm, GGUF/Ollama,
+LangChain/LangSmith-compatible tracing, Prometheus/Grafana, and NVIDIA GPU metrics.
 
 Use this document as the deep reference after the focused guides:
 
@@ -8,7 +12,9 @@ Use this document as the deep reference after the focused guides:
 
 ## 1. Purpose and Scope
 
-`llm-observability-stack` is an umbrella Helm chart for local single-node Kubernetes (k3s) deployments with NVIDIA GPU support.
+EdgeLLM Observability Platform uses the `llm-observability-stack` Helm chart as its open-source
+deployment engine. It targets NVIDIA-powered Linux laptops, workstations, and small edge clusters,
+with a credible path to GPU Operator/DCGM, NIM, and cloud GPU fleets.
 
 Primary goals:
 
@@ -17,7 +23,9 @@ Primary goals:
 - Provide an API integration surface through a FastAPI + LangChain demo app.
 - Provide observability and connectivity triage via LangSmith and an in-cluster Python toolbox.
 
-This chart is optimized for local workstation workflows and interview/demo troubleshooting scenarios.
+The current implementation is a pilot-ready, production-oriented reference architecture with a
+verified local edge profile. It is not yet customer-production-proven and requires workload-specific
+security, reliability, storage, and scale validation.
 
 ## 2. Architecture Overview
 

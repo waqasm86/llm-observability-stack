@@ -32,8 +32,28 @@ Stage, commit, and push:
 
 ```bash
 git add .
-git commit -m "docs: refresh GitHub guidance and harden local values workflow"
+git commit -m "rebrand: position stack as EdgeLLM Observability for NVIDIA edge AI"
 git push origin main
+```
+
+## EdgeLLM Pre-Push Checklist
+
+- no GGUF model binaries
+- no secrets, kubeconfigs, private values, or credentials
+- `helm lint .` passes
+- application and Helm tests pass
+- README says pilot-ready and does not claim production proof
+- competition documents are present
+- verified local results and sanitized benchmark evidence are present
+- no false Lenovo or NVIDIA sponsorship, endorsement, or certification claims
+
+Recommended local checks:
+
+```bash
+git status --short
+git diff --cached --stat
+git diff --cached | rg -n 'BEGIN .*PRIVATE KEY|sk-[A-Za-z0-9]{20,}|kubeconfig'
+find . -type f \( -name '*.gguf' -o -name '*.safetensors' \) -not -path './.git/*'
 ```
 
 ## Remote setup (first time only)
@@ -52,8 +72,10 @@ Do not commit:
 - `.webui_secret_key`
 - `.env*`
 - `*.pem`, `*.key`, `*.crt`
+- `*.kubeconfig`
 - rendered local artifacts and private debug dumps
 - local screenshots in `pictures/`
+- private customer evidence under `artifacts/private/`
 
 These are blocked by `.gitignore` and `.helmignore`.
 

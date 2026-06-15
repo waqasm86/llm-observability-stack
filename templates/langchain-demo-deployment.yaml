@@ -20,10 +20,16 @@ spec:
       labels:
         app.kubernetes.io/name: langchain-demo
     spec:
+      serviceAccountName: {{ include "llm-observability-stack.langchainServiceAccountName" . }}
+      automountServiceAccountToken: false
+      securityContext:
+{{ toYaml .Values.langchainDemo.podSecurityContext | indent 8 }}
       containers:
         - name: app
           image: {{ .Values.langchainDemo.image.repository }}:{{ .Values.langchainDemo.image.tag }}
           imagePullPolicy: {{ .Values.langchainDemo.image.pullPolicy }}
+          securityContext:
+{{ toYaml .Values.langchainDemo.securityContext | indent 12 }}
           workingDir: /app
           command:
             - python

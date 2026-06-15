@@ -81,6 +81,57 @@ def test_helm_install_dry_run_client_succeeds() -> None:
 
 
 @pytest.mark.skipif(shutil.which("helm") is None, reason="helm binary is not available")
+def test_competition_profile_renders_observability_resources() -> None:
+    render = _run(
+        [
+            "helm",
+            "template",
+            "llm-observability-stack",
+            ".",
+            "-f",
+            "values.competition-nvidia.example.yaml",
+            "--set",
+            "langsmith.existingSecret=",
+            "--set",
+            "openWebUI.existingSecret=",
+            "--set",
+            "open-webui.webuiSecret.existingSecretName=",
+        ]
+    )
+    assert render.returncode == 0, _combined_output(render)
+    manifest = render.stdout
+    assert "kind: ServiceMonitor" in manifest
+    assert "kind: Probe" in manifest
+    assert "kind: PrometheusRule" in manifest
+    assert "name: llm-observability-dashboards" in manifest
+    assert "llm_observability_time_to_first_token_seconds" in manifest
+
+
+@pytest.mark.skipif(shutil.which("helm") is None, reason="helm binary is not available")
+def test_geforce_profile_uses_repository_modelfile_and_gpu_worker() -> None:
+    render = _run(
+        [
+            "helm",
+            "template",
+            "llm-observability-stack",
+            ".",
+            "-f",
+            "values.geforce-940m-k3s.yaml",
+        ]
+    )
+    assert render.returncode == 0, _combined_output(render)
+    manifest = render.stdout
+    assert "gemma-3-1b-it-Q4_K_M.gguf" in manifest
+    assert "node-role.kubernetes.io/worker: \"true\"" in manifest
+    assert "nvidia.com/gpu: 1" in manifest
+    assert "PARAMETER num_ctx 1024" in manifest
+
+    default_render = _run(["helm", "template", "llm-observability-stack", "."])
+    assert default_render.returncode == 0, _combined_output(default_render)
+    assert "FROM /models/gguf/gemma-3-1b-it-gguf.gguf" in default_render.stdout
+
+
+@pytest.mark.skipif(shutil.which("helm") is None, reason="helm binary is not available")
 def test_helm_package_stays_below_secret_limit_budget(tmp_path: Path) -> None:
     package = _run(["helm", "package", ".", "-d", str(tmp_path)])
     assert package.returncode == 0, _combined_output(package)
@@ -102,6 +153,10 @@ def test_helm_package_stays_below_secret_limit_budget(tmp_path: Path) -> None:
 
     required_files = [
         "llm-observability-stack/langchain-demo/app.py",
+        "llm-observability-stack/Modelfile.gemma-3-1b-it-gguf",
+        "llm-observability-stack/dashboards/llm-overview.json",
+        "llm-observability-stack/dashboards/nvidia-gpu.json",
+        "llm-observability-stack/dashboards/benchmark-results.json",
         "llm-observability-stack/python-toolbox/examples/langsmith_inference_traces.py",
         "llm-observability-stack/python-toolbox/examples/langsmith_dashboard_seed_every_5m.py",
     ]

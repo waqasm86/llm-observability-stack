@@ -1,0 +1,43 @@
+{{- $dcgm := .Values.monitoring.dcgmExporter.serviceMonitor -}}
+{{- if and .Values.monitoring.enabled $dcgm.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nvidia-dcgm-exporter
+  namespace: {{ include "llm-observability-stack.namespace" . }}
+  labels:
+{{ toYaml .Values.monitoring.labels | indent 4 }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ $dcgm.namespace }}
+  selector:
+    matchLabels:
+{{ toYaml $dcgm.selector | indent 6 }}
+  endpoints:
+    - port: {{ $dcgm.port }}
+      path: {{ $dcgm.path }}
+      interval: {{ $dcgm.interval }}
+{{- end }}
+{{- $nim := .Values.monitoring.nim.serviceMonitor -}}
+{{- if and .Values.monitoring.enabled $nim.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nvidia-nim
+  namespace: {{ include "llm-observability-stack.namespace" . }}
+  labels:
+{{ toYaml .Values.monitoring.labels | indent 4 }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ $nim.namespace }}
+  selector:
+    matchLabels:
+{{ toYaml $nim.selector | indent 6 }}
+  endpoints:
+    - port: {{ $nim.port }}
+      path: {{ $nim.path }}
+      interval: {{ $nim.interval }}
+{{- end }}

@@ -5,3 +5,4 @@ langchain==0.3.21
 langchain-ollama==0.3.0
 langsmith==0.3.18
 httpx==0.28.1
+prometheus-client==0.22.1

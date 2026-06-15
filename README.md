@@ -1,44 +1,112 @@
-# llm-observability-stack
+# EdgeLLM Observability Platform
 
-`llm-observability-stack` is an umbrella Helm chart for a local, single-node, GPU-capable k3s workstation. It packages a practical LLM demo environment around Ollama, Open WebUI, a LangChain-based proxy/demo API, LangSmith tracing, and an optional in-cluster Python toolbox for diagnostics.
+Kubernetes-native observability and benchmarking for private GGUF/NVIDIA LLM inference on Linux edge devices, laptops, workstations, and small GPU clusters.
+
+This repository packages an edge-focused LLM observability stack around k3s, Helm, NVIDIA GPU runtime/device plugin, Ollama/GGUF models, Open WebUI, a LangChain/LangSmith-compatible proxy, Prometheus, Grafana, blackbox probes, benchmark metrics, and NVIDIA/DCGM-ready dashboards.
 
 GitHub repository: <https://github.com/waqasm86/llm-observability-stack>
 
-## What This Repository Is For
+## NVIDIA Inception 2026 Positioning
 
-- Local k3s + NVIDIA workstation experiments
-- GGUF-based Ollama model serving
-- Open WebUI chat demos on a single node
-- LangSmith-traced proxy traffic for observability walkthroughs
-- Kubernetes networking, notebook, and troubleshooting exercises
+This project is being prepared for NVIDIA Inception Grand Challenge 2026 as a pilot-ready EdgeLLM observability platform. The core thesis is that enterprises adopting private LLMs on NVIDIA-powered Linux laptops, workstations, and edge nodes need a repeatable way to deploy, benchmark, monitor, and troubleshoot local inference before scaling to larger NVIDIA GPU fleets.
 
-## What It Deploys
+The current platform provides:
 
-- Vendored `ollama` Helm chart in [charts/ollama](charts/ollama)
-- Vendored `open-webui` Helm chart in [charts/open-webui](charts/open-webui)
-- A local FastAPI-based LangChain demo/proxy in [langchain-demo](langchain-demo)
-- An in-cluster Python toolbox image in [python-toolbox](python-toolbox)
-- Optional Redis resources for Open WebUI websocket/state flows
-- Optional LangSmith dashboard seeder CronJob
-- Optional etcd simulation resources for troubleshooting drills
-- Custom root templates in [templates](templates) that glue the stack together
+- Edge LLM deployment on Linux laptops and workstations.
+- Local private GGUF model serving through Ollama.
+- Kubernetes-native deployment through k3s and Helm.
+- NVIDIA GPU scheduling through `runtimeClassName: nvidia` and `nvidia.com/gpu`.
+- LLM request metrics for TTFT, latency, tokens per second, prompt tokens, generated tokens, active requests, and error rate.
+- GPU and infrastructure views for utilization, framebuffer memory, power, temperature, and a DCGM-compatible dashboard.
+- Reproducible benchmark and competition evidence under [docs/competition](docs/competition).
+- A verified GeForce 940M profile as a low-cost edge feasibility proof.
+- A scale path to RTX laptops/workstations, Jetson and edge boxes, NVIDIA GPU Operator/DCGM, NIM, and NCP or other cloud GPU clusters.
+
+> **Readiness boundary:** This repository is pilot-ready and production-oriented, but not yet customer-production-proven. Customer/design-partner validation, security review, and multi-device benchmark evidence are required before claiming enterprise production readiness. NVIDIA and Lenovo have not endorsed or certified this project.
+
+## Verified Edge Proof: GeForce 940M
+
+The verified local edge profile runs on:
+
+- Host: Lenovo ThinkPad T450s on Xubuntu 24.
+- GPU: NVIDIA GeForce 940M, 1 GiB VRAM, CUDA compute capability 5.0.
+- k3s node: combined control-plane and worker.
+- NVIDIA device plugin resource: `nvidia.com/gpu: 1`.
+- RuntimeClass: `nvidia`.
+- Model: Gemma 3 1B IT Q4_K_M GGUF, approximately 806 MB.
+
+Measured after one warmup and three streaming benchmark requests:
+
+| Metric | Result |
+|---|---:|
+| TTFT p50 | 0.377 s |
+| TTFT p95 | 0.381 s |
+| Mean throughput | 11.69 tokens/s |
+| End-to-end p95 | 6.97 s |
+| Peak GPU utilization | 52% |
+| VRAM usage | 554 MiB |
+
+Evidence and reproduction:
+
+- [Single-node k3s GeForce 940M guide](docs/SINGLE-NODE-K3S-GEFORCE-940M.md)
+- [Verified local results](docs/competition/VERIFIED-LOCAL-RESULTS.md)
+- [Sanitized benchmark artifact](artifacts/geforce-940m-benchmark.json)
+- [GeForce 940M Helm profile](values.geforce-940m-k3s.yaml)
+
+These numbers prove constrained edge feasibility. They do not establish enterprise load, concurrency, fleet reliability, or production readiness.
+
+## Who This Is For
+
+- Enterprise AI/platform teams evaluating private local LLMs.
+- IT teams deploying NVIDIA-powered Linux laptops/workstations.
+- Field engineering teams needing offline/private AI.
+- Universities and AI labs with low-cost GPU fleets.
+- OEM/SI partners validating AI workstation bundles.
+- NVIDIA/Lenovo-style edge AI demo and pilot teams.
+
+## What This Is Not
+
+- Not a generic cloud-only LLM observability SaaS.
+- Not a replacement for LangSmith, Grafana, Prometheus, DCGM, or NIM.
+- Not a claim that every NVIDIA laptop is production-ready for LLM inference.
+- Not an NVIDIA- or Lenovo-certified product yet.
+- Not a repository for committing GGUF model binaries or secrets.
+
+## Platform Components
+
+- Vendored Ollama and Open WebUI Helm charts.
+- FastAPI LangChain/LangSmith-compatible proxy with Prometheus metrics.
+- TTFT, latency, token, throughput, active-request, HTTP, and error telemetry.
+- Optional kube-prometheus-stack, Grafana, Alertmanager, node exporter, and kube-state-metrics.
+- Blackbox endpoint probes and Prometheus alert rules.
+- NVIDIA DCGM dashboard and external DCGM ServiceMonitor integration.
+- NVIDIA NIM `/v1/metrics` ServiceMonitor path.
+- Pushgateway-compatible benchmark reporting.
+- Optional Python diagnostics toolbox, Redis, LangSmith seeder, and etcd failure simulation.
 
 ## Runtime Architecture
 
-Primary request path:
+```text
+User or benchmark client
+        |
+        v
+Open WebUI / FastAPI proxy
+        |                \
+        |                 +--> LangSmith-compatible traces
+        |                 +--> Prometheus /metrics
+        v
+Ollama + private GGUF model       Optional NVIDIA NIM
+        |                              |
+        +---------- NVIDIA GPU --------+
+                         |
+                  DCGM / GPU metrics
 
-1. Browser -> `open-webui` (`LoadBalancer` on local k3s)
-2. `open-webui` -> `langchain-demo` proxy (`/ollama/api/*`)
-3. `langchain-demo` -> `ollama`
-4. `langchain-demo` -> LangSmith API when tracing is configured
-5. `python-toolbox` -> in-cluster DNS/service checks and optional LangSmith support scripts
+Prometheus + Grafana + Alertmanager
+        ^
+        +-- ServiceMonitors, probes, benchmark Pushgateway, Kubernetes metrics
+```
 
-Typical local exposure strategy:
-
-- `open-webui` is exposed directly for browser use
-- `ollama` and `langchain-demo` stay `ClusterIP`
-- host access to internal APIs is done with `kubectl port-forward`
-- the local example profile keeps `pythonToolbox.enabled: true`
+The verified laptop profile uses Ollama/GGUF. The enterprise scale path can retain the observability contract while moving inference to RTX workstations, GPU Operator/DCGM clusters, NIM, or cloud GPUs.
 
 ## Repository Layout
 
@@ -46,221 +114,165 @@ Typical local exposure strategy:
 llm-observability-stack/
 ├── Chart.yaml
 ├── values.yaml
+├── values.validation-k3s.yaml
+├── values.geforce-940m-k3s.yaml
+├── values.competition-nvidia.example.yaml
 ├── values.local-k3s.example.yaml
-├── templates/                     # root chart manifests
-├── charts/                        # vendored dependency charts
-├── langchain-demo/                # local image source for proxy/demo API
-├── python-toolbox/                # local image source for in-cluster helpers
-├── jupyter-notebooks/             # notebook walkthroughs and diagnostics
-├── docs/                          # extended project documentation
-├── hack/                          # local image build/import helpers
-└── tests/                         # smoke tests and chart checks
+├── artifacts/                     # sanitized public benchmark evidence
+├── benchmarks/                    # repeatable inference benchmark clients
+├── dashboards/                    # LLM, benchmark, and NVIDIA GPU dashboards
+├── monitoring/                    # pinned Prometheus Community umbrella chart
+├── templates/                     # application monitoring and security manifests
+├── charts/                        # vendored Ollama and Open WebUI charts
+├── langchain-demo/                # instrumented FastAPI proxy
+├── python-toolbox/                # in-cluster diagnostics
+├── docs/
+│   └── competition/               # pitch, pilot, evidence, and readiness package
+├── hack/                          # validation, device-plugin, and evidence scripts
+└── tests/                         # Helm and application smoke tests
 ```
-
-## Documentation Map
-
-Core documentation:
-
-- [docs/README.md](docs/README.md)
-- [docs/QUICKSTART.md](docs/QUICKSTART.md)
-- [docs/CONFIG-PROFILES.md](docs/CONFIG-PROFILES.md)
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- [docs/OPERATIONS-RUNBOOK.md](docs/OPERATIONS-RUNBOOK.md)
-- [docs/NOTEBOOKS-GUIDE.md](docs/NOTEBOOKS-GUIDE.md)
-- [docs/PROJECT-DOCUMENTATION.md](docs/PROJECT-DOCUMENTATION.md)
-- [docs/KUBERNETES-NETWORKING.md](docs/KUBERNETES-NETWORKING.md)
-- [docs/KUBECTL-COMMAND-REFERENCE.md](docs/KUBECTL-COMMAND-REFERENCE.md)
-- [docs/PYTHON-KUBERNETES-AUTOMATION.md](docs/PYTHON-KUBERNETES-AUTOMATION.md)
-- [docs/GITHUB-PUBLISHING.md](docs/GITHUB-PUBLISHING.md)
-
-Component documentation:
-
-- [langchain-demo/README.md](langchain-demo/README.md)
-- [python-toolbox/README.md](python-toolbox/README.md)
-- [hack/README.md](hack/README.md)
-- [jupyter-notebooks/README.md](jupyter-notebooks/README.md)
-- [jupyter-notebooks/llm-observability-in-action/README.md](jupyter-notebooks/llm-observability-in-action/README.md)
 
 ## Prerequisites
 
-- k3s cluster reachable from `kubectl`
-- NVIDIA runtime configured on the node
-- NVIDIA device plugin already installed in the cluster
-- Helm 3
-- Docker or `nerdctl`
-- A local GGUF model file on host storage
-- Python 3.11 for notebook workflows
+- Linux host or cluster with k3s/Kubernetes reachable through `kubectl`.
+- Helm 3 or 4.
+- NVIDIA driver and NVIDIA Container Toolkit for GPU profiles.
+- NVIDIA device plugin or GPU Operator exposing `nvidia.com/gpu`.
+- A legally obtained GGUF model available on node storage.
+- Python 3.11 for tests and benchmark tooling.
 
-Recommended quick checks:
+Quick checks:
 
 ```bash
 kubectl get nodes -o wide
-kubectl get pods -n nvidia-device-plugin
+kubectl get runtimeclass nvidia
+kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" gpu="}{.status.allocatable.nvidia\.com/gpu}{"\n"}{end}'
 helm version
 ```
 
 ## Quick Start
 
-1. Copy the local values template:
+### A. Minimal validation profile
 
 ```bash
-cp values.local-k3s.example.yaml values.local-k3s.yaml
+helm template llm-observability-stack . \
+  -f values.validation-k3s.yaml
 ```
 
-2. Edit `values.local-k3s.yaml` and set:
+### B. Verified GeForce 940M edge profile
 
-- the GGUF host path values for Ollama
-- LangSmith credentials or existing secret references
-- Open WebUI secret handling
-- any local service exposure overrides you want to keep
-
-Profile guidance:
-
-- generic defaults and local-example differences: [docs/CONFIG-PROFILES.md](docs/CONFIG-PROFILES.md)
-- sanitized local example: [values.local-k3s.example.yaml](values.local-k3s.example.yaml)
-
-3. Build/import local images:
+Review the machine-specific model host path before using this profile on another system.
 
 ```bash
-./hack/build-local-image.sh langchain-demo 0.1.1 ./langchain-demo
-./hack/import-local-image-to-k3s.sh langchain-demo 0.1.1
-./hack/build-local-image.sh python-toolbox 0.2.0 ./python-toolbox
-./hack/import-local-image-to-k3s.sh python-toolbox 0.2.0
-```
+./hack/prepare-single-node-k3s.sh
+./hack/install-nvidia-device-plugin.sh
 
-4. Install or upgrade:
-
-```bash
-helm dependency build .
 helm upgrade --install llm-observability-stack . \
   -n llm-observability --create-namespace \
-  -f values.local-k3s.yaml
+  -f values.geforce-940m-k3s.yaml
+
+./hack/test-geforce-940m-inference.sh
 ```
 
-5. Verify:
+### C. Full competition profile
 
 ```bash
-kubectl get all -n llm-observability
-kubectl get svc -n llm-observability
+helm dependency build monitoring
+
+helm upgrade --install llm-monitoring ./monitoring \
+  -n monitoring --create-namespace
+
+helm upgrade --install llm-observability-stack . \
+  -n llm-observability --create-namespace \
+  -f values.competition-nvidia.example.yaml
 ```
 
-## Local Access Patterns
+Use private values files or existing Kubernetes Secrets for LangSmith and Open WebUI secrets. Never commit secrets.
 
-Browser access:
-
-- Open WebUI: `http://localhost:8080/`
-
-Port-forward internal APIs when needed:
+## Access and Benchmarking
 
 ```bash
+kubectl get pods -n llm-observability -o wide
 kubectl port-forward -n llm-observability svc/ollama 11434:11434
-kubectl port-forward -n llm-observability svc/langchain-demo 8000:8000
 ```
 
-Notebook launch:
+Run the public benchmark from another terminal:
 
 ```bash
-PYTHON_BIN="${PYTHON_BIN:-python3.11}"
-cd jupyter-notebooks
-"${PYTHON_BIN}" -m jupyter lab
+./benchmarks/ollama_benchmark.py \
+  --model gemma3-1b-it-gguf-local \
+  --warmup-runs 1 \
+  --runs 10 \
+  --output artifacts/benchmark-local.json
 ```
 
-## Common Workflows
-
-### Rebuild `langchain-demo`
-
-```bash
-./hack/build-local-image.sh langchain-demo 0.1.1 ./langchain-demo
-./hack/import-local-image-to-k3s.sh langchain-demo 0.1.1
-kubectl rollout restart deploy/langchain-demo -n llm-observability
-```
-
-### Rebuild `python-toolbox`
-
-```bash
-./hack/build-local-image.sh python-toolbox 0.2.0 ./python-toolbox
-./hack/import-local-image-to-k3s.sh python-toolbox 0.2.0
-kubectl rollout restart deploy/python-toolbox -n llm-observability
-```
-
-### Disable toolbox temporarily
-
-```bash
-helm upgrade --install llm-observability-stack . \
-  -n llm-observability --create-namespace \
-  -f values.local-k3s.yaml \
-  --set pythonToolbox.enabled=false
-```
-
-### Render manifests without applying
-
-```bash
-helm template llm-observability-stack . > /tmp/rendered-default.yaml
-helm template llm-observability-stack . -f values.local-k3s.example.yaml > /tmp/rendered-example.yaml
-```
+Only sanitized evidence intended for publication should be committed.
 
 ## Validation
 
-Recommended local validation:
-
 ```bash
 helm lint .
-helm template llm-observability-stack . > /tmp/rendered-default.yaml
-helm template llm-observability-stack . -f values.local-k3s.example.yaml > /tmp/rendered-local.yaml
+helm template llm-observability-stack . >/tmp/rendered-default.yaml
+helm template llm-observability-stack . \
+  -f values.geforce-940m-k3s.yaml >/tmp/rendered-geforce.yaml
+helm template llm-observability-stack . \
+  -f values.competition-nvidia.example.yaml \
+  --set langsmith.existingSecret= \
+  --set openWebUI.existingSecret= \
+  --set open-webui.webuiSecret.existingSecretName= \
+  >/tmp/rendered-competition.yaml
+
+helm dependency build monitoring
+helm lint monitoring
 pytest -q tests
+./hack/competition-validate.sh
+./hack/competition-validate.sh --strict-gpu
 ```
 
-## Troubleshooting Highlights
+The strict GPU check requires an active cluster with an allocatable NVIDIA GPU.
 
-- If `open-webui` is reachable but internal API notebooks fail, check port-forwards for `ollama` and `langchain-demo`.
-- If `langchain-demo` is unhealthy, inspect:
+## Competition and Pilot Package
+
+- [Competition entry point](docs/competition/README.md)
+- [Pitch deck outline](docs/competition/PITCH-DECK-OUTLINE.md)
+- [Pilot proposal template](docs/competition/PILOT-PROPOSAL-TEMPLATE.md)
+- [Edge validation roadmap](docs/competition/EDGE-VALIDATION-ROADMAP.md)
+- [EdgeLLM business model](docs/competition/EDGE-BUSINESS-MODEL.md)
+- [Lenovo/OEM edge AI angle](docs/competition/LENOVO-OEM-ANGLE.md)
+- [Readiness matrix](docs/competition/READINESS-MATRIX.md)
+- [Evidence checklist](docs/competition/EVIDENCE-CHECKLIST.md)
+
+## Security and Evidence Boundaries
+
+- Use `existingSecret` references or private ignored values files.
+- Keep prompt and response capture disabled or redacted for confidential workloads.
+- Do not commit model binaries, kubeconfigs, private customer evidence, credentials, or TLS keys.
+- Treat host-path model mounts and `local-path` persistence as edge-reference defaults, not universal production storage.
+- Complete TLS, SSO/RBAC, backup, retention, network-policy, and threat-model review for each pilot.
+
+## Troubleshooting
 
 ```bash
-kubectl logs -n llm-observability deploy/langchain-demo --tail=100
-kubectl describe deploy -n llm-observability langchain-demo
-```
-
-- If Ollama is slow or unavailable, inspect:
-
-```bash
-kubectl logs -n llm-observability deploy/ollama --tail=100
-kubectl top pods -n llm-observability
+kubectl get pods -A -o wide
+kubectl describe pod -n llm-observability -l app.kubernetes.io/name=ollama
+kubectl logs -n llm-observability deployment/ollama --tail=200
+kubectl get pods -n nvidia-device-plugin
+kubectl get nodes -o json | jq '.items[].status.allocatable'
 watch -n 0.5 nvidia-smi
 ```
 
-- If GPU scheduling fails, inspect:
+The first Ollama image pull can be several gigabytes and may exceed a short Helm wait timeout. Once cached, rerun the same `helm upgrade --install` command to reconcile the release.
 
-```bash
-kubectl get pods -n nvidia-device-plugin
-kubectl get nodes -o json | jq '.items[0].status.allocatable'
-```
+## Documentation
 
-- If notebook diagnostics fail inside the cluster, inspect:
+Start with [docs/README.md](docs/README.md), then use:
 
-```bash
-kubectl get pods -n llm-observability -l app.kubernetes.io/name=python-toolbox -o wide
-kubectl exec -it -n llm-observability deploy/python-toolbox -- bash
-```
+- [Architecture](docs/ARCHITECTURE.md)
+- [Configuration profiles](docs/CONFIG-PROFILES.md)
+- [Operations runbook](docs/OPERATIONS-RUNBOOK.md)
+- [Complete project documentation](docs/PROJECT-DOCUMENTATION.md)
+- [GitHub publishing guide](docs/GITHUB-PUBLISHING.md)
 
-## Git and Publishing
+## Project Status
 
-- GitHub remote: `origin -> https://github.com/waqasm86/llm-observability-stack.git`
-- Publishing guide: [docs/GITHUB-PUBLISHING.md](docs/GITHUB-PUBLISHING.md)
-- Local-only artifacts and secrets are excluded by [.gitignore](.gitignore)
-
-Never commit:
-
-- `values.local-k3s.yaml`
-- `.env*`
-- `.webui_secret_key`
-- TLS keys/certs
-- rendered debug manifests
-- large model binaries
-- notebook checkpoint directories
-
-## Current Local Profile Notes
-
-- Profile reference: [docs/CONFIG-PROFILES.md](docs/CONFIG-PROFILES.md)
-- `open-webui` is intended for direct browser use
-- `ollama` and `langchain-demo` are internal by default
-- the stack is optimized for local Xubuntu + k3s + NVIDIA workflows, not generic multi-node production deployment
+EdgeLLM Observability Platform is an open-source, pilot-ready reference implementation with verified local NVIDIA edge evidence. The next proof requirements are a modern RTX laptop benchmark, workstation and cloud GPU comparisons, security review, and a real design-partner pilot with documented measurable outcomes.

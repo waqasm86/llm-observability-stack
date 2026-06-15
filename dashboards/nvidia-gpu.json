@@ -1,0 +1,38 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {"type": "gauge", "title": "GPU utilization", "id": 1, "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}, "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}}, "targets": [{"expr": "avg(DCGM_FI_DEV_GPU_UTIL)", "refId": "A"}]},
+    {"type": "gauge", "title": "Framebuffer memory", "id": 2, "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}, "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}}, "targets": [{"expr": "100 * sum(DCGM_FI_DEV_FB_USED) / clamp_min(sum(DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE), 1)", "refId": "A"}]},
+    {"type": "gauge", "title": "GPU temperature", "id": 3, "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}, "fieldConfig": {"defaults": {"unit": "celsius", "min": 0, "max": 100}}, "targets": [{"expr": "max(DCGM_FI_DEV_GPU_TEMP)", "refId": "A"}]},
+    {"type": "stat", "title": "Total GPU power", "id": 4, "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}, "fieldConfig": {"defaults": {"unit": "watt"}}, "targets": [{"expr": "sum(DCGM_FI_DEV_POWER_USAGE)", "refId": "A"}]},
+    {"type": "timeseries", "title": "GPU utilization by device", "id": 5, "gridPos": {"h": 9, "w": 12, "x": 0, "y": 8}, "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}}, "targets": [{"expr": "DCGM_FI_DEV_GPU_UTIL", "legendFormat": "GPU {{gpu}} {{modelName}}", "refId": "A"}]},
+    {
+      "type": "timeseries", "title": "Temperature and power", "id": 6,
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {"expr": "DCGM_FI_DEV_GPU_TEMP", "legendFormat": "temp GPU {{gpu}}", "refId": "A"},
+        {"expr": "DCGM_FI_DEV_POWER_USAGE", "legendFormat": "power GPU {{gpu}}", "refId": "B"}
+      ]
+    },
+    {
+      "type": "timeseries", "title": "SM and Tensor Core activity", "id": 7,
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 17}, "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}},
+      "targets": [
+        {"expr": "DCGM_FI_PROF_SM_ACTIVE", "legendFormat": "SM GPU {{gpu}}", "refId": "A"},
+        {"expr": "DCGM_FI_PROF_PIPE_TENSOR_ACTIVE", "legendFormat": "Tensor GPU {{gpu}}", "refId": "B"}
+      ]
+    },
+    {"type": "timeseries", "title": "SM clock", "id": 8, "gridPos": {"h": 9, "w": 12, "x": 12, "y": 17}, "fieldConfig": {"defaults": {"unit": "hertz"}}, "targets": [{"expr": "DCGM_FI_DEV_SM_CLOCK * 1000000", "legendFormat": "GPU {{gpu}}", "refId": "A"}]}
+  ],
+  "refresh": "10s",
+  "schemaVersion": 41,
+  "tags": ["nvidia", "dcgm", "gpu", "competition"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timezone": "browser",
+  "title": "NVIDIA GPU Observability",
+  "uid": "nvidia-gpu-observability",
+  "version": 1
+}

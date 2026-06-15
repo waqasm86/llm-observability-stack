@@ -1,0 +1,19 @@
+{{- if and .Values.monitoring.enabled .Values.monitoring.blackbox.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: llm-stack-http
+  namespace: {{ include "llm-observability-stack.namespace" . }}
+  labels:
+{{ toYaml .Values.monitoring.labels | indent 4 }}
+spec:
+  jobName: llm-stack-http
+  interval: {{ .Values.monitoring.blackbox.interval }}
+  module: {{ .Values.monitoring.blackbox.module }}
+  prober:
+    url: {{ .Values.monitoring.blackbox.proberUrl }}
+  targets:
+    staticConfig:
+      static:
+{{ tpl (toYaml .Values.monitoring.blackbox.targets) . | indent 8 }}
+{{- end }}

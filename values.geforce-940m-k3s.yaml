@@ -1,0 +1,99 @@
+namespace:
+  create: true
+  name: llm-observability
+
+monitoring:
+  enabled: false
+networkPolicy:
+  enabled: false
+langsmith:
+  enabled: false
+
+nvidia:
+  runtimeClassName: nvidia
+  gpuResourceName: nvidia.com/gpu
+  gpuCount: 1
+
+ollamaModel:
+  enabled: true
+  name: gemma3-1b-it-gguf-local
+  createAtStartup: true
+  warmupPrompt: Say hello in one short sentence.
+  gguf:
+    enabled: true
+    hostPath: /media/waqasm86/External11/Project-Llamatelemetry/repos-llamatelemetry/llamatelemetry-xubuntu24/models
+    filename: gemma-3-1b-it-Q4_K_M.gguf
+    mountPath: /models/gguf
+  modelfile:
+    file: Modelfile.gemma-3-1b-it-gguf
+
+ollama:
+  enabled: true
+  runtimeClassName: nvidia
+  nodeSelector:
+    node-role.kubernetes.io/worker: "true"
+    nvidia.com/gpu.present: "true"
+  image:
+    repository: ollama/ollama
+    tag: 0.17.7
+    pullPolicy: IfNotPresent
+  ollama:
+    gpu:
+      enabled: true
+      type: nvidia
+      number: 1
+      nvidiaResource: nvidia.com/gpu
+    models:
+      pull: []
+      run: []
+      create:
+        - name: gemma3-1b-it-gguf-local
+          configMapRef: ollama-local-modelfile
+          configMapKeyRef: Modelfile
+  persistentVolume:
+    enabled: true
+    storageClass: local-path
+    size: 5Gi
+  service:
+    type: ClusterIP
+    port: 11434
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      cpu: 3000m
+      memory: 5Gi
+  volumeMounts:
+    - name: local-gguf-model
+      mountPath: /models/gguf
+      readOnly: true
+  volumes:
+    - name: local-gguf-model
+      hostPath:
+        path: /media/waqasm86/External11/Project-Llamatelemetry/repos-llamatelemetry/llamatelemetry-xubuntu24/models
+        type: Directory
+  extraEnv:
+    - name: OLLAMA_KEEP_ALIVE
+      value: 10m
+    - name: OLLAMA_NUM_PARALLEL
+      value: "1"
+    - name: OLLAMA_MAX_LOADED_MODELS
+      value: "1"
+    - name: OLLAMA_CONTEXT_LENGTH
+      value: "1024"
+
+openWebUI:
+  enabled: false
+open-webui:
+  enabled: false
+redis:
+  enabled: false
+langchainDemo:
+  enabled: false
+pythonToolbox:
+  enabled: false
+langsmithDashboardSeeder:
+  enabled: false
+etcd:
+  enabled: false

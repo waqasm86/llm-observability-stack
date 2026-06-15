@@ -1,0 +1,12 @@
+dependencies:
+- name: kube-prometheus-stack
+  repository: https://prometheus-community.github.io/helm-charts
+  version: 86.2.3
+- name: prometheus-blackbox-exporter
+  repository: https://prometheus-community.github.io/helm-charts
+  version: 11.12.0
+- name: prometheus-pushgateway
+  repository: https://prometheus-community.github.io/helm-charts
+  version: 3.6.1
+digest: sha256:da828249b68bfe4ab3949a75170c200750a0dd35ed2878ade36880d927515050
+generated: "2026-06-15T17:03:09.156948918+05:00"

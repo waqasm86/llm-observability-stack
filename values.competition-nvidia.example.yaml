@@ -1,0 +1,63 @@
+namespace:
+  create: true
+  name: llm-observability
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+  blackbox:
+    enabled: true
+  prometheusRules:
+    enabled: true
+  grafanaDashboards:
+    enabled: true
+  dcgmExporter:
+    serviceMonitor:
+      enabled: false
+  nim:
+    serviceMonitor:
+      enabled: false
+
+networkPolicy:
+  enabled: true
+  monitoringNamespace: monitoring
+
+nvidia:
+  runtimeClassName: nvidia
+  gpuResourceName: nvidia.com/gpu
+  gpuCount: 1
+
+ollama:
+  runtimeClassName: nvidia
+  ollama:
+    gpu:
+      enabled: true
+      type: nvidia
+      number: 1
+      nvidiaResource: nvidia.com/gpu
+
+langsmith:
+  enabled: true
+  tracing: true
+  apiKey: ""
+  existingSecret: langsmith-secrets
+  existingSecretKey: LANGSMITH_API_KEY
+
+openWebUI:
+  auth: true
+  existingSecret: open-webui-secrets
+  existingSecretKey: WEBUI_SECRET_KEY
+
+open-webui:
+  extraEnvVars:
+    - name: OLLAMA_BASE_URL
+      value: http://langchain-demo:8000/ollama
+    - name: ENABLE_PERSISTENT_CONFIG
+      value: "False"
+    - name: WEBUI_AUTH
+      value: "True"
+  webuiSecret:
+    enabled: true
+    existingSecretName: open-webui-secrets
+    existingSecretKey: WEBUI_SECRET_KEY

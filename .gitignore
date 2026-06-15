@@ -8,6 +8,7 @@ values.local-*.yaml
 *.pem
 *.key
 *.crt
+*.kubeconfig
 
 # Generated render/debug artifacts
 rendered.yaml
@@ -26,6 +27,7 @@ pictures/
 # Helm build outputs
 charts/*.tgz
 charts/**/*.tgz
+monitoring/charts/*.tgz
 # Large model/data artifacts (keep out of git)
 *.gguf
 *.safetensors
@@ -34,6 +36,10 @@ charts/**/*.tgz
 *.bin
 models/
 data/
+artifacts/*
+!artifacts/geforce-940m-benchmark.json
+!artifacts/README.md
+artifacts/private/
 # Python cache
 __pycache__/
 *.pyc

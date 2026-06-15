@@ -1,0 +1,25 @@
+namespace:
+  create: true
+  name: llm-observability-validation
+monitoring:
+  enabled: false
+langsmith:
+  enabled: false
+ollamaModel:
+  enabled: false
+ollama:
+  enabled: false
+openWebUI:
+  enabled: false
+open-webui:
+  enabled: false
+redis:
+  enabled: false
+langchainDemo:
+  enabled: false
+pythonToolbox:
+  enabled: false
+langsmithDashboardSeeder:
+  enabled: false
+etcd:
+  enabled: false
