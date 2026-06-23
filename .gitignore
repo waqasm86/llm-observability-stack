@@ -11,9 +11,12 @@ values.local-*.yaml
 *.kubeconfig
 
 # Generated render/debug artifacts
+.generated/
 rendered.yaml
 rendered-*.yaml
 manifests.yaml
+values.runtime-detected.yaml
+values.*-detected.yaml
 *.log
 *.tmp
 .cache/

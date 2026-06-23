@@ -17,7 +17,14 @@ This directory contains the local image workflow helpers for `llm-observability-
 - `bootstrap-enterprise-pilot-k3s.sh`
   - installs Prometheus Operator CRDs from the vendored kube-prometheus-stack chart
   - installs the enterprise-pilot k3s profile with the vendored OpenTelemetry Collector subchart
+  - calls `detect-runtime-profile.sh` by default so NVIDIA GPU nodes are used when available and CPU mode is used otherwise
   - passes any extra CLI flags through to `helm upgrade --install`
+
+- `detect-runtime-profile.sh`
+  - inspects Kubernetes node allocatable resources
+  - writes `.generated/values.runtime-detected.yaml`
+  - enables NVIDIA scheduling when `nvidia.com/gpu` is advertised
+  - disables NVIDIA runtime and GPU requests when only CPU capacity is available
 
 ## Typical Usage
 
@@ -41,6 +48,15 @@ Bootstrap the local enterprise-pilot profile:
 ./hack/bootstrap-enterprise-pilot-k3s.sh \
   --set langchainDemo.enabled=false \
   --set pythonToolbox.enabled=false
+```
+
+Force a CPU-only render or install path for validation:
+
+```bash
+./hack/detect-runtime-profile.sh --mode cpu
+helm template llm-observability-stack . \
+  -f values.enterprise-pilot-k3s.yaml \
+  -f .generated/values.runtime-detected.yaml
 ```
 
 Enable `langchainDemo` and `pythonToolbox` only after their local images have been imported into k3s containerd.

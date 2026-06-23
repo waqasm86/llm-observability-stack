@@ -1,0 +1,189 @@
+namespace:
+  create: true
+  name: llm-observability
+
+runtime:
+  accelerator: cpu
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+  blackbox:
+    enabled: true
+  prometheusRules:
+    enabled: true
+  grafanaDashboards:
+    enabled: true
+  dcgmExporter:
+    serviceMonitor:
+      enabled: false
+
+kube-prometheus-stack:
+  enabled: true
+  grafana:
+    adminUser: admin
+    adminPassword: admin
+    persistence:
+      enabled: true
+      storageClassName: local-path
+      size: 5Gi
+
+opentelemetry-operator:
+  enabled: false
+
+opentelemetry-collector:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+
+opentelemetry:
+  enabled: true
+
+gpu-operator:
+  enabled: false
+nvidia-device-plugin:
+  enabled: false
+dcgm-exporter:
+  enabled: false
+
+networkPolicy:
+  enabled: false
+
+langsmith:
+  enabled: false
+
+nvidia:
+  runtimeClassName: ""
+  gpuResourceName: nvidia.com/gpu
+  gpuCount: 0
+
+ollamaModel:
+  enabled: true
+  name: gemma3-1b-it-gguf-local
+  createAtStartup: true
+  gguf:
+    enabled: true
+    hostPath: /media/waqasm86/External11/Project-Llamatelemetry/repos-llamatelemetry/llamatelemetry-xubuntu24/models
+    filename: gemma-3-1b-it-Q4_K_M.gguf
+    mountPath: /models/gguf
+  modelfile:
+    file: Modelfile.gemma-3-1b-it-gguf
+
+ollama:
+  enabled: true
+  runtimeClassName: ""
+  nodeSelector: null
+  image:
+    repository: ollama/ollama
+    tag: 0.17.7
+    pullPolicy: IfNotPresent
+  ollama:
+    gpu:
+      enabled: false
+      type: nvidia
+      number: 0
+      nvidiaResource: nvidia.com/gpu
+    models:
+      pull: []
+      run: []
+      create:
+        - name: gemma3-1b-it-gguf-local
+          configMapRef: ollama-local-modelfile
+          configMapKeyRef: Modelfile
+  persistentVolume:
+    enabled: true
+    storageClass: local-path
+    size: 5Gi
+    annotations:
+      "helm.sh/resource-policy": keep
+  service:
+    type: ClusterIP
+    port: 11434
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 3000m
+      memory: 5Gi
+  volumeMounts:
+    - name: local-gguf-model
+      mountPath: /models/gguf
+      readOnly: true
+  volumes:
+    - name: local-gguf-model
+      hostPath:
+        path: /media/waqasm86/External11/Project-Llamatelemetry/repos-llamatelemetry/llamatelemetry-xubuntu24/models
+        type: Directory
+  extraEnv:
+    - name: OLLAMA_KEEP_ALIVE
+      value: 10m
+    - name: OLLAMA_NUM_PARALLEL
+      value: "1"
+    - name: OLLAMA_MAX_LOADED_MODELS
+      value: "1"
+    - name: OLLAMA_CONTEXT_LENGTH
+      value: "1024"
+
+langchainDemo:
+  enabled: true
+  image:
+    repository: langchain-demo
+    tag: 0.1.1
+    pullPolicy: IfNotPresent
+  app:
+    workers: 1
+  appFromConfigMap:
+    enabled: true
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+
+openWebUI:
+  enabled: true
+  auth: false
+  ollamaBaseUrl: http://langchain-demo:8000/ollama
+  webuiSecretKey: replace-with-a-32-plus-char-secret
+  service:
+    type: ClusterIP
+    port: 8080
+
+open-webui:
+  enabled: true
+  service:
+    type: ClusterIP
+    port: 8080
+    containerPort: 8080
+  ollamaUrls:
+    - http://langchain-demo:8000/ollama
+  extraEnvVars:
+    - name: OLLAMA_BASE_URL
+      value: http://langchain-demo:8000/ollama
+    - name: ENABLE_PERSISTENT_CONFIG
+      value: "False"
+    - name: WEBUI_AUTH
+      value: "False"
+
+redis:
+  enabled: false
+
+pythonToolbox:
+  enabled: true
+  image:
+    repository: python-toolbox
+    tag: 0.2.0
+    pullPolicy: IfNotPresent
+
+langsmithDashboardSeeder:
+  enabled: false
+
+etcd:
+  enabled: false

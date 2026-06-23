@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NAMESPACE="${NAMESPACE:-llm-observability}"
 RELEASE="${RELEASE:-llm-observability-stack}"
 VALUES_FILE="${VALUES_FILE:-values.enterprise-pilot-k3s.yaml}"
+AUTO_DETECT_RUNTIME="${AUTO_DETECT_RUNTIME:-true}"
+RUNTIME_MODE="${RUNTIME_MODE:-auto}"
+RUNTIME_VALUES_FILE="${RUNTIME_VALUES_FILE:-.generated/values.runtime-detected.yaml}"
 
 cd "${ROOT_DIR}"
 
@@ -43,6 +46,13 @@ echo "Checking Kubernetes access"
 kubectl cluster-info >/dev/null
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 
+values_args=(-f "${VALUES_FILE}")
+if [[ "${AUTO_DETECT_RUNTIME}" == "true" ]]; then
+  echo "Detecting Kubernetes runtime profile"
+  ./hack/detect-runtime-profile.sh --mode "${RUNTIME_MODE}" --output "${RUNTIME_VALUES_FILE}"
+  values_args+=(-f "${RUNTIME_VALUES_FILE}")
+fi
+
 missing_images=()
 if [[ "${langchain_disabled}" == false ]] && ! check_runtime_image image-check-langchain langchain-demo:0.1.1; then
   missing_images+=("langchain-demo:0.1.1")
@@ -80,7 +90,8 @@ kubectl wait --for=condition=Established \
 echo "Installing enterprise-pilot profile"
 helm upgrade --install "${RELEASE}" . \
   -n "${NAMESPACE}" --create-namespace \
-  -f "${VALUES_FILE}" \
+  "${values_args[@]}" \
+  --set namespace.create=false \
   --set kube-prometheus-stack.crds.enabled=false \
   "$@"
 

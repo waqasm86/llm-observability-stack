@@ -5,6 +5,11 @@ namespace:
   create: false
   name: llm-observability
 
+runtime:
+  # Set by values profiles or by .generated/values.runtime-detected.yaml.
+  # Supported values: nvidia, cpu.
+  accelerator: nvidia
+
 notes:
   requireNvidiaDevicePlugin: true
 

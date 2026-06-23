@@ -1,6 +1,12 @@
-1. GPU workloads require the NVIDIA device plugin and an allocatable GPU resource.
-2. Confirm the GGUF host path exists on every node eligible for Ollama scheduling.
-3. Suggested install:
+{{- $runtime := default "nvidia" .Values.runtime.accelerator -}}
+1. Runtime profile: {{ $runtime }}
+{{- if eq $runtime "nvidia" }}
+2. NVIDIA mode requires the NVIDIA device plugin and an allocatable GPU resource.
+{{- else }}
+2. CPU mode disables NVIDIA runtime, GPU resource requests, and DCGM exporter.
+{{- end }}
+3. Confirm the GGUF host path exists on every node eligible for Ollama scheduling.
+4. Suggested install:
    helm upgrade --install llm-observability-stack ./llm-observability-stack      -n {{ include "llm-observability-stack.namespace" . }} --create-namespace      -f values.enterprise-pilot-k3s.yaml      --set kube-prometheus-stack.crds.enabled=false
 
 Endpoints after install:

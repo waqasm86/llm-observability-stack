@@ -138,6 +138,101 @@ def test_geforce_profile_uses_repository_modelfile_and_gpu_worker() -> None:
 
 
 @pytest.mark.skipif(shutil.which("helm") is None, reason="helm binary is not available")
+def test_cpu_profile_disables_nvidia_scheduling() -> None:
+    render = _run(
+        [
+            "helm",
+            "template",
+            "llm-observability-stack",
+            ".",
+            "-f",
+            "values.cpu-k3s.yaml",
+        ]
+    )
+    assert render.returncode == 0, _combined_output(render)
+    manifest = render.stdout
+    assert "name: ollama" in manifest
+    assert "runtimeClassName: \"nvidia\"" not in manifest
+    assert "runtimeClassName: nvidia" not in manifest
+    assert "nvidia.com/gpu: 1" not in manifest
+    assert "nvidia.com/gpu.present" not in manifest
+    assert "name: dcgm-exporter" not in manifest
+    assert "readOnly: true" in manifest
+    assert "/bin/ollama rm" not in manifest
+
+
+@pytest.mark.skipif(shutil.which("helm") is None, reason="helm binary is not available")
+def test_generated_cpu_overlay_can_override_enterprise_gpu_profile() -> None:
+    render = _run(
+        [
+            "helm",
+            "template",
+            "llm-observability-stack",
+            ".",
+            "-f",
+            "values.enterprise-pilot-k3s.yaml",
+            "--set",
+            "runtime.accelerator=cpu",
+            "--set",
+            "nvidia.runtimeClassName=",
+            "--set",
+            "nvidia.gpuCount=0",
+            "--set",
+            "dcgm-exporter.enabled=false",
+            "--set",
+            "monitoring.dcgmExporter.serviceMonitor.enabled=false",
+            "--set",
+            "ollama.runtimeClassName=",
+            "--set",
+            "ollama.nodeSelector=null",
+            "--set",
+            "ollama.ollama.gpu.enabled=false",
+            "--set",
+            "ollama.ollama.gpu.number=0",
+        ]
+    )
+    assert render.returncode == 0, _combined_output(render)
+    manifest = render.stdout
+    assert "runtimeClassName: \"nvidia\"" not in manifest
+    assert "runtimeClassName: nvidia" not in manifest
+    assert "nvidia.com/gpu: 1" not in manifest
+    assert "nvidia.com/gpu.present" not in manifest
+
+
+@pytest.mark.skipif(shutil.which("helm") is None, reason="helm binary is not available")
+def test_generated_nvidia_overlay_uses_gpu_resource_without_static_node_label() -> None:
+    render = _run(
+        [
+            "helm",
+            "template",
+            "llm-observability-stack",
+            ".",
+            "-f",
+            "values.enterprise-pilot-k3s.yaml",
+            "--set",
+            "runtime.accelerator=nvidia",
+            "--set",
+            "nvidia.runtimeClassName=nvidia",
+            "--set",
+            "nvidia.gpuCount=1",
+            "--set",
+            "ollama.runtimeClassName=nvidia",
+            "--set",
+            "ollama.nodeSelector=null",
+            "--set",
+            "ollama.ollama.gpu.enabled=true",
+            "--set",
+            "ollama.ollama.gpu.number=1",
+        ]
+    )
+    assert render.returncode == 0, _combined_output(render)
+    manifest = render.stdout
+    assert "runtimeClassName: \"nvidia\"" in manifest
+    assert "nvidia.com/gpu: 1" in manifest
+    assert "nvidia.com/gpu.present" not in manifest
+
+
+@pytest.mark.skipif(shutil.which("helm") is None, reason="helm binary is not available")
 def test_model_cleanup_is_rejected() -> None:
     render = _run(
         [

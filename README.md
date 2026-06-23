@@ -151,6 +151,10 @@ kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" gpu="}{.statu
 helm version
 ```
 
+The local bootstrap helper detects the Kubernetes runtime before installing. It uses NVIDIA mode
+when Kubernetes advertises `nvidia.com/gpu`; otherwise it writes a CPU-only overlay and runs the
+same edge LLM observability path without NVIDIA runtime or GPU resource requests.
+
 ## Quick Start
 
 ### A. Minimal validation profile
@@ -202,6 +206,23 @@ For a guided local setup, use:
 
 ```bash
 ./hack/bootstrap-enterprise-pilot-k3s.sh
+```
+
+To inspect the generated runtime overlay without installing:
+
+```bash
+./hack/detect-runtime-profile.sh
+cat .generated/values.runtime-detected.yaml
+```
+
+To force CPU mode for validation:
+
+```bash
+./hack/detect-runtime-profile.sh --mode cpu
+helm template llm-observability-stack . \
+  -f values.enterprise-pilot-k3s.yaml \
+  -f .generated/values.runtime-detected.yaml \
+  --set kube-prometheus-stack.crds.enabled=false
 ```
 
 Do not switch an existing release from `values.enterprise-pilot-k3s.yaml` to a private profile that changes the `ollama` PVC size unless you intentionally recreate or migrate the PVC. k3s `local-path` storage does not resize that claim in place.
